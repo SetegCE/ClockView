@@ -1,0 +1,216 @@
+"use client";
+
+// Página /projetos — Lista de projetos com painel de detalhes lateral
+
+import { useState } from "react";
+import { useDados } from "@/app/context/DadosContext";
+import { Loading, Erro } from "@/app/components/LoadingErro";
+import { PCOLS } from "@/app/lib/constants";
+import { fmt, trunc, iniciais } from "@/app/lib/utils";
+
+interface ProjetoAgregado {
+  nome: string;
+  totalHoras: number;
+  colaboradores: { nome: string; horas: number }[];
+}
+
+export default function PageProjetos() {
+  const { dados, carregando, erro } = useDados();
+  const [projetoSelecionado, setProjetoSelecionado] = useState<string | null>(null);
+
+  if (carregando) return <Loading />;
+  if (erro) return <Erro mensagem={erro} />;
+  if (!dados) return null;
+
+  // Agrega projetos de todos os colaboradores
+  const mapaProj = new Map<string, ProjetoAgregado>();
+  for (const colab of dados.colaboradores) {
+    for (const proj of colab.topProjetos) {
+      if (!mapaProj.has(proj.nome)) {
+        mapaProj.set(proj.nome, { nome: proj.nome, totalHoras: 0, colaboradores: [] });
+      }
+      const ag = mapaProj.get(proj.nome)!;
+      ag.totalHoras += proj.horas;
+      ag.colaboradores.push({ nome: colab.nome, horas: proj.horas });
+    }
+  }
+
+  const projetos = Array.from(mapaProj.values()).sort((a, b) => b.totalHoras - a.totalHoras);
+  const maxHoras = projetos.length > 0 ? projetos[0].totalHoras : 1;
+  const totalGeralHoras = projetos.reduce((s, p) => s + p.totalHoras, 0);
+
+  const proj = projetoSelecionado ? mapaProj.get(projetoSelecionado) ?? null : null;
+  const colabsOrdenados = proj ? [...proj.colaboradores].sort((a, b) => b.horas - a.horas) : [];
+  const maxColabHoras = colabsOrdenados.length > 0 ? colabsOrdenados[0].horas : 1;
+
+  return (
+    <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+      {/* Lista de projetos — layout fixo, só a tabela rola */}
+      <div style={{ flex: 1, overflow: "hidden", padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* Cards de resumo — fixos no topo */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, flexShrink: 0 }}>
+          <div className="cv-card">
+            <div>
+              <div className="cv-card-label">Total de projetos</div>
+              <div className="cv-card-value">{projetos.length}</div>
+              <div className="cv-card-sub">clientes / projetos</div>
+            </div>
+            <div className="cv-card-icon" style={{ background: "#6366f1" }}>
+              <i className="bi bi-folder2-open" />
+            </div>
+          </div>
+          <div className="cv-card">
+            <div>
+              <div className="cv-card-label">Total de horas</div>
+              <div className="cv-card-value">{fmt(totalGeralHoras)}h</div>
+              <div className="cv-card-sub">em todos os projetos</div>
+            </div>
+            <div className="cv-card-icon" style={{ background: "#10b981" }}>
+              <i className="bi bi-clock-fill" />
+            </div>
+          </div>
+          <div className="cv-card">
+            <div>
+              <div className="cv-card-label">Maior projeto</div>
+              <div className="cv-card-value" style={{ fontSize: 18, marginTop: 6 }}>
+                {projetos.length > 0 ? trunc(projetos[0].nome, 20) : "—"}
+              </div>
+              <div className="cv-card-sub">
+                {projetos.length > 0 ? `${fmt(projetos[0].totalHoras)}h registradas` : ""}
+              </div>
+            </div>
+            <div className="cv-card-icon" style={{ background: "#f59e0b" }}>
+              <i className="bi bi-trophy-fill" />
+            </div>
+          </div>
+        </div>
+
+        {/* Tabela de projetos — flex: 1 com scroll apenas no corpo */}
+        <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #f1f5f9", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+          {/* Cabeçalho fixo */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 130px 80px", padding: "12px 20px", borderBottom: "1px solid #f1f5f9", background: "#f8fafc", flexShrink: 0 }}>
+            {["Projeto / Cliente", "Horas", "Colaboradores", "% do total"].map((h, i) => (
+              <span key={h} style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: i > 0 ? "right" : "left" }}>
+                {h}
+              </span>
+            ))}
+          </div>
+          {/* Corpo com scroll */}
+          <div style={{ flex: 1, overflowY: "auto" }}>
+          {projetos.map((p, idx) => {
+            const selecionado = projetoSelecionado === p.nome;
+            const pctTotal = totalGeralHoras > 0 ? Math.round((p.totalHoras / totalGeralHoras) * 100) : 0;
+            const pctBarra = Math.round((p.totalHoras / maxHoras) * 100);
+            const cor = PCOLS[idx % PCOLS.length];
+
+            return (
+              <div
+                key={p.nome}
+                onClick={() => setProjetoSelecionado(selecionado ? null : p.nome)}
+                style={{
+                  display: "grid", gridTemplateColumns: "1fr 100px 130px 80px",
+                  padding: "14px 20px", borderBottom: "1px solid #f8fafc",
+                  cursor: "pointer", alignItems: "center",
+                  background: selecionado ? "#eef2ff" : "transparent",
+                  transition: "background 0.1s",
+                }}
+                onMouseEnter={(e) => { if (!selecionado) (e.currentTarget as HTMLDivElement).style.background = "#f8fafc"; }}
+                onMouseLeave={(e) => { if (!selecionado) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: 3, background: cor, flexShrink: 0 }} />
+                    <span style={{ fontSize: 14, fontWeight: selecionado ? 700 : 500, color: selecionado ? "#4f46e5" : "#334155", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {p.nome}
+                    </span>
+                  </div>
+                  <div style={{ height: 4, background: "#f1f5f9", borderRadius: 2, overflow: "hidden", marginLeft: 20 }}>
+                    <div style={{ height: 4, borderRadius: 2, width: `${pctBarra}%`, background: cor }} />
+                  </div>
+                </div>
+                <div style={{ textAlign: "right", fontSize: 14, fontWeight: 700, color: cor }}>{fmt(p.totalHoras)}h</div>
+                <div style={{ textAlign: "right", fontSize: 13, color: "#64748b" }}>
+                  {p.colaboradores.length} {p.colaboradores.length === 1 ? "pessoa" : "pessoas"}
+                </div>
+                <div style={{ textAlign: "right", fontSize: 13, fontWeight: 600, color: "#94a3b8" }}>{pctTotal}%</div>
+              </div>
+            );
+          })}
+          </div>{/* fim do corpo com scroll */}
+        </div>{/* fim da tabela */}
+      </div>
+
+      {/* Painel de detalhes */}
+      <div style={{ width: 360, flexShrink: 0, background: "#fff", borderLeft: "1px solid #f1f5f9", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {!proj ? (
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 32, textAlign: "center" }}>
+            <div style={{ width: 56, height: 56, borderRadius: 16, background: "#eef2ff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <i className="bi bi-folder2-open" style={{ fontSize: 24, color: "#6366f1" }} />
+            </div>
+            <p style={{ fontSize: 15, fontWeight: 700, color: "#334155" }}>Selecione um projeto</p>
+            <p style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.5 }}>
+              Clique em qualquer projeto da lista para ver a distribuição por colaborador.
+            </p>
+          </div>
+        ) : (
+          <>
+            <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #f1f5f9", flexShrink: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em" }}>Projeto selecionado</div>
+              <div style={{ fontSize: 17, fontWeight: 700, color: "#1e293b", marginTop: 4, lineHeight: 1.3 }}>{proj.nome}</div>
+              <div style={{ display: "flex", gap: 20, marginTop: 14 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: "#94a3b8" }}>Total de horas</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: "#6366f1" }}>{fmt(proj.totalHoras)}h</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "#94a3b8" }}>Colaboradores</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: "#334155" }}>{proj.colaboradores.length}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "#94a3b8" }}>% do total</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: "#334155" }}>
+                    {totalGeralHoras > 0 ? Math.round((proj.totalHoras / totalGeralHoras) * 100) : 0}%
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>
+                Distribuição por colaborador
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {colabsOrdenados.map((c, idx) => {
+                  const pctColab = Math.round((c.horas / proj.totalHoras) * 100);
+                  const pctBarra = Math.round((c.horas / maxColabHoras) * 100);
+                  const colab = dados.colaboradores.find((x) => x.nome === c.nome);
+                  return (
+                    <div key={c.nome} style={{ padding: "12px 14px", background: "#f8fafc", borderRadius: 12, border: "1px solid #f1f5f9" }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div className="cv-avatar" style={{ width: 32, height: 32, fontSize: 11, flexShrink: 0 }}>
+                            {iniciais(c.nome)}
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#334155" }}>{c.nome}</div>
+                            {colab && <div style={{ fontSize: 11, color: "#94a3b8" }}>Meta: {colab.meta}h/sem</div>}
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: PCOLS[idx % PCOLS.length] }}>{fmt(c.horas)}h</div>
+                          <div style={{ fontSize: 11, color: "#94a3b8" }}>{pctColab}% do projeto</div>
+                        </div>
+                      </div>
+                      <div style={{ height: 5, background: "#e2e8f0", borderRadius: 3, overflow: "hidden" }}>
+                        <div style={{ height: 5, borderRadius: 3, width: `${pctBarra}%`, background: PCOLS[idx % PCOLS.length] }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
