@@ -23,6 +23,9 @@ export default function PageCalendario() {
   if (erro) return <Erro mensagem={erro} />;
   if (!dados) return null;
 
+  // Garante que dados não é null nas funções abaixo
+  const dadosNaoNulo = dados;
+
   function mesAnterior() {
     if (mes === 0) { setMes(11); setAno(ano - 1); } else setMes(mes - 1);
   }
@@ -32,7 +35,7 @@ export default function PageCalendario() {
 
   function diaTemDado(dataStr: string): boolean {
     const data = new Date(dataStr + "T12:00:00Z");
-    return dados.colaboradores.some((c) =>
+    return dadosNaoNulo.colaboradores.some((c) =>
       c.semanas.some((sd) => {
         if (sd.skip || sd.horas === 0) return false;
         const inicio = new Date(sd.semana + "T00:00:00Z");
@@ -45,7 +48,7 @@ export default function PageCalendario() {
   function colaboradoresDoDia(dataStr: string) {
     const data = new Date(dataStr + "T12:00:00Z");
     const resultado: { nome: string; horas: number; semana: string }[] = [];
-    for (const c of dados.colaboradores) {
+    for (const c of dadosNaoNulo.colaboradores) {
       for (const sd of c.semanas) {
         if (sd.skip || sd.horas === 0) continue;
         const inicio = new Date(sd.semana + "T00:00:00Z");
@@ -61,7 +64,7 @@ export default function PageCalendario() {
 
   function semanaDodia(dataStr: string): string | null {
     const data = new Date(dataStr + "T12:00:00Z");
-    for (const c of dados.colaboradores) {
+    for (const c of dadosNaoNulo.colaboradores) {
       for (const sd of c.semanas) {
         if (sd.skip) continue;
         const inicio = new Date(sd.semana + "T00:00:00Z");
