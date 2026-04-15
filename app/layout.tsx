@@ -6,7 +6,7 @@ import Sidebar from "@/app/components/Sidebar";
 import HeaderClient from "@/app/components/HeaderClient";
 
 export const metadata: Metadata = {
-  title: "ClockView — SETEG",
+  title: "ClockView - Seteg",
   description: "Dashboard de jornada semanal dos colaboradores SETEG",
   icons: {
     icon: "/logo-seteg.png",
