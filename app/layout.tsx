@@ -2,12 +2,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./dashboard.css";
 import { DadosProvider } from "@/app/context/DadosContext";
-import Sidebar from "@/app/components/Sidebar";
-import HeaderClient from "@/app/components/HeaderClient";
+import AppShell from "@/app/components/AppShell";
 
 export const metadata: Metadata = {
   title: "ClockView - Seteg",
-  description: "Dashboard de jornada semanal dos colaboradores SETEG",
   icons: {
     icon: "/logo-seteg.png",
   },
@@ -29,13 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body style={{ fontFamily: "'Satoshi', sans-serif" }}>
         <DadosProvider>
-          <div className="cv-root">
-            <Sidebar />
-            <div className="cv-main">
-              <HeaderClient />
-              {children}
-            </div>
-          </div>
+          <AppShell>{children}</AppShell>
         </DadosProvider>
       </body>
     </html>
