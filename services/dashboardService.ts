@@ -29,23 +29,22 @@ import type {
 interface CacheEntry {
   dados: DadosDashboard;
   timestamp: number;
+  chave: string; // inclui período para evitar conflito
 }
 
-// Cache global — sobrevive entre requisições no mesmo processo Node.js
 const globalCache = global as typeof global & { _clockviewCache?: CacheEntry };
-
-/** TTL do cache: 10 minutos */
 const CACHE_TTL_MS = 10 * 60 * 1000;
 
-export function getCacheDados(): DadosDashboard | null {
+export function getCacheDados(chave: string): DadosDashboard | null {
   const entry = globalCache._clockviewCache;
   if (!entry) return null;
+  if (entry.chave !== chave) return null;
   if (Date.now() - entry.timestamp > CACHE_TTL_MS) return null;
   return entry.dados;
 }
 
-function setCacheDados(dados: DadosDashboard) {
-  globalCache._clockviewCache = { dados, timestamp: Date.now() };
+function setCacheDados(dados: DadosDashboard, chave: string) {
+  globalCache._clockviewCache = { dados, timestamp: Date.now(), chave };
 }
 
 export function invalidarCache() {
@@ -90,6 +89,16 @@ function novoBucket(): BucketSemana {
   return { work: 0, folga: 0, carnaval: 0, absence: 0, projetos: new Map(), cats: new Map() };
 }
 
+// ─── Helpers de nome ─────────────────────────────────────────────────────────
+
+/**
+ * Remove o sufixo " | SETEG" (e variações) do nome do colaborador.
+ * Ex: "Leomyr Sângelo | SETEG" → "Leomyr Sângelo"
+ */
+function limparNome(nome: string): string {
+  return nome.replace(/\s*\|\s*SETEG\s*$/i, "").trim();
+}
+
 // ─── Busca de dados brutos ────────────────────────────────────────────────────
 
 async function buscarUsuarios(): Promise<ClockifyUser[]> {
@@ -132,26 +141,29 @@ async function buscarEntradasUsuario(
 
 // ─── Processamento principal ──────────────────────────────────────────────────
 
-export async function processarDashboard(): Promise<DadosDashboard> {
-  // Retorna do cache se ainda válido (evita rebuscar dentro de 10 minutos)
-  const cached = getCacheDados();
-  if (cached) return cached;
-
+export async function processarDashboard(startDate?: string, endDate?: string): Promise<DadosDashboard> {
   const hoje = new Date().toISOString().slice(0, 10);
-  const startISO = `${START_DATE}T00:00:00Z`;
-  const endISO = `${hoje}T23:59:59Z`;
+  const startISO = `${startDate ?? START_DATE}T00:00:00Z`;
+  const endISO = `${endDate ?? hoje}T23:59:59Z`;
+  const chaveCache = `${startISO}|${endISO}`;
+
+  // Retorna do cache se ainda válido para o mesmo período
+  const cached = getCacheDados(chaveCache);
+  if (cached) return cached;
 
   // Busca usuários e projetos em paralelo
   const [usuarios, projetos] = await Promise.all([buscarUsuarios(), buscarProjetos()]);
 
-  // Mapas de lookup
+  // Mapas de lookup — usa nome limpo para colaboradores, nome do projeto para projetos
   const mapaUsuarios = new Map(
     usuarios
-      .filter((u) => !EXCLUDE_USERS.includes(u.name))
-      .map((u) => [u.id, u.name]),
+      .filter((u) => !EXCLUDE_USERS.some(ex => limparNome(u.name) === ex || u.name.includes(ex)))
+      .map((u) => [u.id, limparNome(u.name)]),
   );
+
+  // Usa o nome do projeto diretamente (contém código + nome completo)
   const mapaProjetos = new Map(
-    projetos.map((p) => [p.id, p.clientName || "SETEG (interno)"]),
+    projetos.map((p) => [p.id, p.name]),
   );
 
   // Acumulador: nome → semana → bucket
@@ -383,7 +395,7 @@ export async function processarDashboard(): Promise<DadosDashboard> {
     colaboradores,
   };
 
-  // Salva no cache
-  setCacheDados(resultado);
+  // Salva no cache com a chave do período
+  setCacheDados(resultado, chaveCache);
   return resultado;
 }

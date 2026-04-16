@@ -1,20 +1,31 @@
 // Funções utilitárias compartilhadas entre os componentes do ClockView
 
-/** Retorna cor de fundo e texto para uma célula do heatmap */
+/** Retorna cor de fundo e texto para uma célula do heatmap — paleta semáforo */
 export function corCelula(horas: number, meta: number): { bg: string; fg: string } {
   if (horas === 0) return { bg: "#D3D1C7", fg: "#5F5E5A" };
-  const pct = horas / meta;
-  if (pct >= 1.0)  return { bg: "#00C48C", fg: "#FFFFFF" };
-  if (pct >= 0.95) return { bg: "#3B6D11", fg: "#FFFFFF" };
-  if (pct >= 0.75) return { bg: "#EF9F27", fg: "#FFFFFF" };
-  if (pct >= 0.5)  return { bg: "#D85A30", fg: "#FFFFFF" };
-  return                  { bg: "#A32D2D", fg: "#FFFFFF" };
+  const pct = (horas / meta) * 100;
+  if (pct > 80)  return { bg: "#3B6D11", fg: "#FFFFFF" }; // verde
+  if (pct > 50)  return { bg: "#EF9F27", fg: "#FFFFFF" }; // amarelo
+  return              { bg: "#E24B4A", fg: "#FFFFFF" };    // vermelho
 }
 
-/** Retorna classe CSS do badge conforme percentual */
+/** Retorna o número da semana ISO 8601 para uma data YYYY-MM-DD */
+export function numeroSemanaISO(dataStr: string): number {
+  const d = new Date(dataStr + "T12:00:00Z");
+  const jan4 = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+  const inicioSemana1 = new Date(jan4);
+  inicioSemana1.setUTCDate(jan4.getUTCDate() - ((jan4.getUTCDay() + 6) % 7));
+  const diff = d.getTime() - inicioSemana1.getTime();
+  const semana = Math.floor(diff / (7 * 24 * 60 * 60 * 1000)) + 1;
+  // Trata semanas do ano anterior/próximo
+  if (semana < 1) return numeroSemanaISO(`${d.getUTCFullYear() - 1}-12-31`);
+  return semana;
+}
+
+/** Retorna classe CSS do badge conforme percentual — paleta semáforo */
 export function badgeClass(pct: number): string {
-  if (pct >= 95) return "cv-badge green";
-  if (pct >= 75) return "cv-badge blue";
+  if (pct > 80) return "cv-badge green";
+  if (pct > 50) return "cv-badge yellow";
   return "cv-badge red";
 }
 

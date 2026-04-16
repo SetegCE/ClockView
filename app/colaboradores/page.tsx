@@ -12,28 +12,46 @@ import type { Categoria } from "@/lib/types";
 export default function PageColaboradores() {
   const { dados, carregando, erro } = useDados();
   const [expandido, setExpandido] = useState<string | null>(null);
+  const [busca, setBusca] = useState("");
 
   if (carregando) return <Loading />;
   if (erro) return <Erro mensagem={erro} />;
   if (!dados) return null;
 
-  const lista = [...dados.colaboradores].sort((a, b) => b.mediaPct - a.mediaPct);
+  const lista = [...dados.colaboradores]
+    .filter((c) => c.nome.toLowerCase().includes(busca.toLowerCase()))
+    .sort((a, b) => b.mediaPct - a.mediaPct);
 
   return (
     <div className="cv-col" style={{ overflow: "auto" }}>
       <div className="cv-inner">
+        {/* Campo de busca */}
+        <div style={{ position: "relative" }}>
+          <i className="bi bi-search" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: 13, pointerEvents: "none" }} />
+          <input
+            type="text"
+            placeholder="Buscar colaborador..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            style={{
+              fontSize: 13, padding: "7px 12px 7px 32px",
+              border: "1px solid #e2e8f0", borderRadius: 8,
+              fontFamily: "inherit", color: "#334155", background: "#fff",
+              outline: "none", width: 220,
+            }}
+          />
+        </div>
+
         {/* Legenda unificada — cores do heatmap + indicadores de semanas */}
         <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #f1f5f9", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
           {/* Linha 1: cores */}
           <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>Média semanal</span>
             {[
-              { bg: "#00C48C", label: "≥ 100%" },
-              { bg: "#3B6D11", label: "≥ 95%" },
-              { bg: "#EF9F27", label: "≥ 75%" },
-              { bg: "#D85A30", label: "≥ 50%" },
-              { bg: "#A32D2D", label: "< 50%" },
-              { bg: "#D3D1C7", label: "Sem dado" },
+              { bg: "#D3D1C7", label: "Sem dados" },
+              { bg: "#E24B4A", label: "≤ 50%" },
+              { bg: "#EF9F27", label: "≤ 80%" },
+              { bg: "#3B6D11", label: "> 80%" },
             ].map((l) => (
               <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
                 <div style={{ width: 14, height: 9, borderRadius: 3, background: l.bg, flexShrink: 0 }} />
@@ -70,10 +88,9 @@ export default function PageColaboradores() {
             const totalCats = Object.values(colab.catsTotal).reduce((a, v) => a + (v ?? 0), 0) || 1;
 
             // Cor baseada no percentual — usada na barra e no badge
-            const corPct = colab.mediaPct >= 95 ? "#00C48C"
-              : colab.mediaPct >= 75 ? "#3B6D11"
-              : colab.mediaPct >= 50 ? "#EF9F27"
-              : "#A32D2D";
+            const corPct = colab.mediaPct > 80 ? "#3B6D11"
+              : colab.mediaPct > 50 ? "#EF9F27"
+              : "#E24B4A";
 
             return (
               <div

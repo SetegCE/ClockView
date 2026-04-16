@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useDados } from "@/app/context/DadosContext";
 import { Loading, Erro } from "@/app/components/LoadingErro";
 import PainelDetalhes from "@/app/components/PainelDetalhes";
-import { corCelula, badgeClass, fmt, fmtData, trunc, iniciais } from "@/app/lib/utils";
+import { corCelula, badgeClass, fmt, fmtData, trunc, iniciais, numeroSemanaISO } from "@/app/lib/utils";
 
 type TipoOrdem = "mediaPct" | "nome" | "mediaHoras";
 
@@ -102,12 +102,10 @@ export default function PageDashboard() {
                 <span className="cv-toolbar-title">Heatmap de horas</span>
                 <div className="cv-legend">
                   {[
-                    { bg: "#00C48C", label: "≥ 100%" },
-                    { bg: "#3B6D11", label: "≥ 95%" },
-                    { bg: "#EF9F27", label: "≥ 75%" },
-                    { bg: "#D85A30", label: "≥ 50%" },
-                    { bg: "#A32D2D", label: "< 50%" },
-                    { bg: "#D3D1C7", label: "Sem dado" },
+                    { bg: "#D3D1C7", label: "Sem dados" },
+                    { bg: "#E24B4A", label: "≤ 50%" },
+                    { bg: "#EF9F27", label: "≤ 80%" },
+                    { bg: "#3B6D11", label: "> 80%" },
                   ].map((l) => (
                     <div key={l.label} className="cv-legend-item">
                       <div className="cv-legend-rect" style={{ background: l.bg }} />
@@ -142,7 +140,9 @@ export default function PageDashboard() {
               <div className="cv-heatmap-inner">
                 <div className="cv-week-header">
                   {semanasVisiveis.map((s) => (
-                    <div key={s} className="cv-week-label">{fmtData(s)}</div>
+                    <div key={s} className="cv-week-label" title={fmtData(s)}>
+                      Sem {numeroSemanaISO(s)}
+                    </div>
                   ))}
                 </div>
                 <div className="cv-rows">
@@ -189,7 +189,7 @@ export default function PageDashboard() {
                                 key={s}
                                 className={`cv-cell${sd.carnavalAuto ? " cv-cell-carnav" : ""}${destacado ? " highlighted" : ""}`}
                                 style={{ background: bg, color: fg }}
-                                title={`${colab.nome} — ${fmtData(s)}: ${fmt(sd.horas)}h (${sd.pct}%)`}
+                                title={`${colab.nome} — Sem ${numeroSemanaISO(s)} (${fmtData(s)}): ${fmt(sd.horas)}h (${sd.pct}%)`}
                                 onClick={() => {
                                   setColaboradorAberto(colab.nome);
                                   setSemanaAberta(destacado ? null : s);

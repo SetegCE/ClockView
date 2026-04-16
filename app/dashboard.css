@@ -617,12 +617,12 @@ div.cv-cell.no-data {
   box-sizing: border-box;
 }
 .cv-badge.green {
-  background: #042c53;
+  background: #3b6d11;
   color: #ffffff;
   border: none;
 }
-.cv-badge.blue {
-  background: #185fa5;
+.cv-badge.yellow {
+  background: #ef9f27;
   color: #ffffff;
   border: none;
 }

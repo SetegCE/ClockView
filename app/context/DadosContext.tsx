@@ -4,11 +4,26 @@ import { createContext, useContext, useState, useCallback, useEffect, ReactNode 
 import { usePathname } from "next/navigation";
 import type { DadosDashboard } from "@/lib/types";
 
+function primeiroDiaMes(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function ultimoDiaMes(): string {
+  const d = new Date();
+  const ultimo = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  return `${ultimo.getFullYear()}-${String(ultimo.getMonth() + 1).padStart(2, "0")}-${String(ultimo.getDate()).padStart(2, "0")}`;
+}
+
 interface DadosContextType {
   dados: DadosDashboard | null;
   carregando: boolean;
   atualizando: boolean;
   erro: string | null;
+  periodoInicio: string;
+  periodoFim: string;
+  setPeriodoInicio: (d: string) => void;
+  setPeriodoFim: (d: string) => void;
   atualizar: (forcar?: boolean) => Promise<void>;
 }
 
@@ -19,14 +34,17 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [periodoInicio, setPeriodoInicio] = useState(primeiroDiaMes);
+  const [periodoFim, setPeriodoFim] = useState(ultimoDiaMes);
   const pathname = usePathname();
 
   const atualizar = useCallback(async (forcar = false) => {
     try {
       if (forcar) setAtualizando(true);
       setErro(null);
-      const url = forcar ? "/api/dashboard?force=true" : "/api/dashboard";
-      const res = await fetch(url);
+      const params = new URLSearchParams({ inicio: periodoInicio, fim: periodoFim });
+      if (forcar) params.set("force", "true");
+      const res = await fetch(`/api/dashboard?${params.toString()}`);
 
       if (res.status === 401) {
         window.location.href = "/login";
@@ -45,10 +63,9 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       setCarregando(false);
       setAtualizando(false);
     }
-  }, []);
+  }, [periodoInicio, periodoFim]);
 
   useEffect(() => {
-    // Não busca dados na tela de login
     if (pathname === "/login") {
       setCarregando(false);
       return;
@@ -57,7 +74,11 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   }, [atualizar, pathname]);
 
   return (
-    <DadosContext.Provider value={{ dados, carregando, atualizando, erro, atualizar }}>
+    <DadosContext.Provider value={{
+      dados, carregando, atualizando, erro,
+      periodoInicio, periodoFim, setPeriodoInicio, setPeriodoFim,
+      atualizar,
+    }}>
       {children}
     </DadosContext.Provider>
   );
