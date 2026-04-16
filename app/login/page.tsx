@@ -9,6 +9,7 @@ export default function PageLogin() {
   const [codigo, setCodigo] = useState("");
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
+  const [mostrarCodigo, setMostrarCodigo] = useState(false);
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -66,9 +67,6 @@ export default function PageLogin() {
           <h1 style={{ fontSize: 20, fontWeight: 700, color: "#1e293b", marginTop: 12 }}>
             ClockView
           </h1>
-          <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 4 }}>
-            Dashboard de jornada semanal — SETEG
-          </p>
         </div>
 
         {/* Formulário */}
@@ -80,33 +78,57 @@ export default function PageLogin() {
             >
               Código de acesso
             </label>
-            <input
-              id="codigo"
-              type="password"
-              value={codigo}
-              onChange={(e) => setCodigo(e.target.value)}
-              placeholder="Digite seu código"
-              required
-              autoFocus
-              style={{
-                width: "100%",
-                padding: "10px 14px",
-                fontSize: 14,
-                border: "1px solid #e2e8f0",
-                borderRadius: 8,
-                outline: "none",
-                fontFamily: "inherit",
-                boxSizing: "border-box",
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = "#2563eb";
-                e.target.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.1)";
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = "#e2e8f0";
-                e.target.style.boxShadow = "none";
-              }}
-            />
+            <div style={{ position: "relative" }}>
+              <input
+                id="codigo"
+                type={mostrarCodigo ? "text" : "password"}
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value)}
+                placeholder="Digite seu código"
+                required
+                autoFocus
+                style={{
+                  width: "100%",
+                  padding: "10px 40px 10px 14px",
+                  fontSize: 14,
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 8,
+                  outline: "none",
+                  fontFamily: "inherit",
+                  boxSizing: "border-box",
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = "#2563eb";
+                  e.target.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.1)";
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = "#e2e8f0";
+                  e.target.style.boxShadow = "none";
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setMostrarCodigo(!mostrarCodigo)}
+                style={{
+                  position: "absolute",
+                  right: 10,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#94a3b8",
+                  fontSize: 16,
+                  padding: 4,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+                title={mostrarCodigo ? "Ocultar código" : "Mostrar código"}
+              >
+                <i className={`bi ${mostrarCodigo ? "bi-eye-slash-fill" : "bi-eye-fill"}`} />
+              </button>
+            </div>
           </div>
 
           {/* Erro */}

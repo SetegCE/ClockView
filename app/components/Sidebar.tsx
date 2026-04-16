@@ -4,7 +4,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const ITENS = [
   { href: "/dashboard",      icon: "bi-grid-1x2-fill",  title: "Dashboard" },
@@ -15,6 +15,13 @@ const ITENS = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <aside className="cv-sidebar">
@@ -46,8 +53,15 @@ export default function Sidebar() {
       })}
 
       <div className="cv-sidebar-spacer" />
-      <button className="cv-sidebar-btn" title="Configurações">
-        <i className="bi bi-gear-fill" />
+
+      {/* Botão de logout */}
+      <button
+        className="cv-sidebar-btn"
+        title="Sair"
+        onClick={handleLogout}
+        style={{ color: "#ef4444" }}
+      >
+        <i className="bi bi-box-arrow-right" />
       </button>
     </aside>
   );
