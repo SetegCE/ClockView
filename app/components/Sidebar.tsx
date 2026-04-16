@@ -38,7 +38,7 @@ export default function Sidebar() {
             href={item.href}
             className="cv-sidebar-btn"
             title={item.title}
-            style={ativo ? { color: "#6366f1", background: "#eef2ff" } : undefined}
+            style={ativo ? { color: "#2563eb", background: "#eff6ff" } : undefined}
           >
             <i className={`bi ${item.icon}`} />
           </Link>

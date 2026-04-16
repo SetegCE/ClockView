@@ -4,11 +4,11 @@
 export function corCelula(horas: number, meta: number): { bg: string; fg: string } {
   if (horas === 0) return { bg: "#D3D1C7", fg: "#5F5E5A" };
   const pct = horas / meta;
-  if (pct >= 1.0)  return { bg: "#042C53", fg: "#FFFFFF" };
-  if (pct >= 0.95) return { bg: "#185FA5", fg: "#FFFFFF" };
-  if (pct >= 0.75) return { bg: "#0F6E56", fg: "#FFFFFF" };
-  if (pct >= 0.5)  return { bg: "#EF9F27", fg: "#FFFFFF" };
-  return                  { bg: "#E24B4A", fg: "#FFFFFF" };
+  if (pct >= 1.0)  return { bg: "#00C48C", fg: "#FFFFFF" };
+  if (pct >= 0.95) return { bg: "#3B6D11", fg: "#FFFFFF" };
+  if (pct >= 0.75) return { bg: "#EF9F27", fg: "#FFFFFF" };
+  if (pct >= 0.5)  return { bg: "#D85A30", fg: "#FFFFFF" };
+  return                  { bg: "#A32D2D", fg: "#FFFFFF" };
 }
 
 /** Retorna classe CSS do badge conforme percentual */

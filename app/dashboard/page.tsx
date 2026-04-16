@@ -59,7 +59,7 @@ export default function PageDashboard() {
                 <div className="cv-card-value">{totalColabs}</div>
                 <div className="cv-card-sub">ativos no período</div>
               </div>
-              <div className="cv-card-icon" style={{ background: "#6366f1" }}>
+              <div className="cv-card-icon" style={{ background: "#2563eb" }}>
                 <i className="bi bi-people-fill" />
               </div>
             </div>
@@ -69,7 +69,7 @@ export default function PageDashboard() {
                 <div className="cv-card-value">{Math.round(mediaGeral)}%</div>
                 <div className="cv-card-sub">da meta semanal</div>
               </div>
-              <div className="cv-card-icon" style={{ background: "#10b981" }}>
+              <div className="cv-card-icon" style={{ background: "#2563eb" }}>
                 <i className="bi bi-graph-up" />
               </div>
             </div>
@@ -79,7 +79,7 @@ export default function PageDashboard() {
                 <div className="cv-card-value">{acimaMeta}</div>
                 <div className="cv-card-sub">colaboradores ≥ 95%</div>
               </div>
-              <div className="cv-card-icon" style={{ background: "#f59e0b" }}>
+              <div className="cv-card-icon" style={{ background: "#2563eb" }}>
                 <i className="bi bi-award-fill" />
               </div>
             </div>
@@ -89,7 +89,7 @@ export default function PageDashboard() {
                 <div className="cv-card-value">{semanasVisiveis.length}</div>
                 <div className="cv-card-sub">com dados registrados</div>
               </div>
-              <div className="cv-card-icon" style={{ background: "#ef4444" }}>
+              <div className="cv-card-icon" style={{ background: "#2563eb" }}>
                 <i className="bi bi-calendar-week-fill" />
               </div>
             </div>
@@ -102,11 +102,11 @@ export default function PageDashboard() {
                 <span className="cv-toolbar-title">Heatmap de horas</span>
                 <div className="cv-legend">
                   {[
-                    { bg: "#042C53", label: "≥ 100%" },
-                    { bg: "#185FA5", label: "≥ 95%" },
-                    { bg: "#0F6E56", label: "≥ 75%" },
-                    { bg: "#EF9F27", label: "≥ 50%" },
-                    { bg: "#E24B4A", label: "< 50%" },
+                    { bg: "#00C48C", label: "≥ 100%" },
+                    { bg: "#3B6D11", label: "≥ 95%" },
+                    { bg: "#EF9F27", label: "≥ 75%" },
+                    { bg: "#D85A30", label: "≥ 50%" },
+                    { bg: "#A32D2D", label: "< 50%" },
                     { bg: "#D3D1C7", label: "Sem dado" },
                   ].map((l) => (
                     <div key={l.label} className="cv-legend-item">

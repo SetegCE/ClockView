@@ -55,7 +55,7 @@ export default function PageProjetos() {
               <div className="cv-card-value">{projetos.length}</div>
               <div className="cv-card-sub">clientes / projetos</div>
             </div>
-            <div className="cv-card-icon" style={{ background: "#6366f1" }}>
+            <div className="cv-card-icon" style={{ background: "#ff8200" }}>
               <i className="bi bi-folder2-open" />
             </div>
           </div>
@@ -65,7 +65,7 @@ export default function PageProjetos() {
               <div className="cv-card-value">{fmt(totalGeralHoras)}h</div>
               <div className="cv-card-sub">em todos os projetos</div>
             </div>
-            <div className="cv-card-icon" style={{ background: "#10b981" }}>
+            <div className="cv-card-icon" style={{ background: "#ff8200" }}>
               <i className="bi bi-clock-fill" />
             </div>
           </div>
@@ -79,7 +79,7 @@ export default function PageProjetos() {
                 {projetos.length > 0 ? `${fmt(projetos[0].totalHoras)}h registradas` : ""}
               </div>
             </div>
-            <div className="cv-card-icon" style={{ background: "#f59e0b" }}>
+            <div className="cv-card-icon" style={{ background: "#ff8200" }}>
               <i className="bi bi-trophy-fill" />
             </div>
           </div>
@@ -88,9 +88,9 @@ export default function PageProjetos() {
         {/* Tabela de projetos — flex: 1 com scroll apenas no corpo */}
         <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #f1f5f9", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
           {/* Cabeçalho fixo */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 100px 130px 80px", padding: "12px 20px", borderBottom: "1px solid #f1f5f9", background: "#f8fafc", flexShrink: 0 }}>
-            {["Projeto / Cliente", "Horas", "Colaboradores", "% do total"].map((h, i) => (
-              <span key={h} style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: i > 0 ? "right" : "left" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "220px 1fr 100px 120px 64px", padding: "12px 20px", borderBottom: "1px solid #f1f5f9", background: "#f8fafc", flexShrink: 0, gap: 12 }}>
+            {["Projeto / Cliente", "", "Horas", "Colaboradores", "% do total"].map((h, i) => (
+              <span key={i} style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: i > 1 ? "right" : "left" }}>
                 {h}
               </span>
             ))}
@@ -108,31 +108,52 @@ export default function PageProjetos() {
                 key={p.nome}
                 onClick={() => setProjetoSelecionado(selecionado ? null : p.nome)}
                 style={{
-                  display: "grid", gridTemplateColumns: "1fr 100px 130px 80px",
-                  padding: "14px 20px", borderBottom: "1px solid #f8fafc",
-                  cursor: "pointer", alignItems: "center",
-                  background: selecionado ? "#eef2ff" : "transparent",
+                  display: "grid",
+                  gridTemplateColumns: "220px 1fr 100px 120px 64px",
+                  padding: "10px 20px",
+                  borderBottom: "1px solid #f8fafc",
+                  cursor: "pointer",
+                  alignItems: "center",
+                  gap: 12,
+                  background: selecionado ? "#eff6ff" : "transparent",
                   transition: "background 0.1s",
                 }}
                 onMouseEnter={(e) => { if (!selecionado) (e.currentTarget as HTMLDivElement).style.background = "#f8fafc"; }}
                 onMouseLeave={(e) => { if (!selecionado) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
               >
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: 3, background: cor, flexShrink: 0 }} />
-                    <span style={{ fontSize: 14, fontWeight: selecionado ? 700 : 500, color: selecionado ? "#4f46e5" : "#334155", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {p.nome}
-                    </span>
-                  </div>
-                  <div style={{ height: 4, background: "#f1f5f9", borderRadius: 2, overflow: "hidden", marginLeft: 20 }}>
-                    <div style={{ height: 4, borderRadius: 2, width: `${pctBarra}%`, background: cor }} />
-                  </div>
+                {/* Nome — largura fixa */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: 2, background: cor, flexShrink: 0 }} />
+                  <span style={{
+                    fontSize: 13, fontWeight: selecionado ? 700 : 500,
+                    color: selecionado ? "#2563eb" : "#334155",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>
+                    {p.nome}
+                  </span>
                 </div>
-                <div style={{ textAlign: "right", fontSize: 14, fontWeight: 700, color: cor }}>{fmt(p.totalHoras)}h</div>
-                <div style={{ textAlign: "right", fontSize: 13, color: "#64748b" }}>
-                  {p.colaboradores.length} {p.colaboradores.length === 1 ? "pessoa" : "pessoas"}
+
+                {/* Barra — sempre no mesmo espaço */}
+                <div style={{ height: 5, background: "#f1f5f9", borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{ height: 5, borderRadius: 3, width: `${pctBarra}%`, background: cor, transition: "width 0.3s" }} />
                 </div>
-                <div style={{ textAlign: "right", fontSize: 13, fontWeight: 600, color: "#94a3b8" }}>{pctTotal}%</div>
+
+                {/* Horas — destaque */}
+                <div style={{ textAlign: "right" }}>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: cor }}>{fmt(p.totalHoras)}</span>
+                  <span style={{ fontSize: 11, color: "#94a3b8", marginLeft: 2 }}>h</span>
+                </div>
+
+                {/* Colaboradores */}
+                <div style={{ textAlign: "right" }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>{p.colaboradores.length}</span>
+                  <span style={{ fontSize: 11, color: "#94a3b8", marginLeft: 4 }}>{p.colaboradores.length === 1 ? "pessoa" : "pessoas"}</span>
+                </div>
+
+                {/* % do total */}
+                <div style={{ textAlign: "right" }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: pctTotal >= 10 ? "#334155" : "#94a3b8" }}>{pctTotal}%</span>
+                </div>
               </div>
             );
           })}
