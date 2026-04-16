@@ -1,9 +1,7 @@
 "use client";
 
-// Context global que mantém os dados do Clockify em memória
-// Evita rebuscar ao navegar entre rotas
-
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import type { DadosDashboard } from "@/lib/types";
 
 interface DadosContextType {
@@ -21,6 +19,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const pathname = usePathname();
 
   const atualizar = useCallback(async (forcar = false) => {
     try {
@@ -29,7 +28,6 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       const url = forcar ? "/api/dashboard?force=true" : "/api/dashboard";
       const res = await fetch(url);
 
-      // Não autenticado — redireciona para login
       if (res.status === 401) {
         window.location.href = "/login";
         return;
@@ -50,8 +48,13 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // Não busca dados na tela de login
+    if (pathname === "/login") {
+      setCarregando(false);
+      return;
+    }
     atualizar(false);
-  }, [atualizar]);
+  }, [atualizar, pathname]);
 
   return (
     <DadosContext.Provider value={{ dados, carregando, atualizando, erro, atualizar }}>
