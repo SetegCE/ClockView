@@ -14,7 +14,11 @@ export function middleware(request: NextRequest) {
   // Verifica o cookie de sessão
   const sessao = request.cookies.get("clockview_session");
   if (!sessao || sessao.value !== "authenticated") {
-    // Redireciona para o login
+    // Se for uma rota de API, retorna 401 em JSON em vez de redirecionar
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+    }
+    // Para páginas, redireciona para o login
     const loginUrl = new URL("/login", request.url);
     return NextResponse.redirect(loginUrl);
   }
@@ -23,6 +27,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Aplica o middleware em todas as rotas exceto arquivos estáticos
   matcher: ["/((?!_next/static|_next/image|favicon.ico|logo-seteg.png).*)"],
 };

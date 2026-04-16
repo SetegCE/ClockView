@@ -28,6 +28,13 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       setErro(null);
       const url = forcar ? "/api/dashboard?force=true" : "/api/dashboard";
       const res = await fetch(url);
+
+      // Não autenticado — redireciona para login
+      if (res.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? `Erro HTTP ${res.status}`);
