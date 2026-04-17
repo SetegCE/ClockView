@@ -89,9 +89,9 @@ export default function PageProjetos() {
         {/* Tabela de projetos — flex: 1 com scroll apenas no corpo */}
         <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #f1f5f9", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
           {/* Cabeçalho fixo */}
-          <div style={{ display: "grid", gridTemplateColumns: "80px 100px 70px 1fr 400px", padding: "12px 20px", borderBottom: "1px solid #f1f5f9", background: "#f8fafc", flexShrink: 0, gap: 16 }}>
-            {["Horas", "Colaboradores", "% do total", "", "Projeto / Cliente"].map((h, i) => (
-              <span key={i} style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: i < 3 ? "left" : (i === 4 ? "left" : "left") }}>
+          <div style={{ display: "grid", gridTemplateColumns: "400px 1fr 80px 100px 70px", padding: "12px 20px", borderBottom: "1px solid #f1f5f9", background: "#f8fafc", flexShrink: 0, gap: 16 }}>
+            {["Projeto / Cliente", "", "Horas", "Colaboradores", "% do total"].map((h, i) => (
+              <span key={i} style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", textAlign: i > 1 ? "right" : "left" }}>
                 {h}
               </span>
             ))}
@@ -110,7 +110,7 @@ export default function PageProjetos() {
                 onClick={() => setProjetoSelecionado(selecionado ? null : p.nome)}
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "80px 100px 70px 1fr 400px",
+                  gridTemplateColumns: "400px 1fr 80px 100px 70px",
                   padding: "10px 20px",
                   borderBottom: "1px solid #f8fafc",
                   cursor: "pointer",
@@ -122,29 +122,7 @@ export default function PageProjetos() {
                 onMouseEnter={(e) => { if (!selecionado) (e.currentTarget as HTMLDivElement).style.background = "#f8fafc"; }}
                 onMouseLeave={(e) => { if (!selecionado) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
               >
-                {/* Horas — primeira coluna */}
-                <div style={{ textAlign: "left" }}>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: cor }}>{fmt(p.totalHoras)}</span>
-                  <span style={{ fontSize: 11, color: "#94a3b8", marginLeft: 2 }}>h</span>
-                </div>
-
-                {/* Colaboradores — segunda coluna */}
-                <div style={{ textAlign: "left" }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>{p.colaboradores.length}</span>
-                  <span style={{ fontSize: 11, color: "#94a3b8", marginLeft: 4 }}>{p.colaboradores.length === 1 ? "pessoa" : "pessoas"}</span>
-                </div>
-
-                {/* % do total — terceira coluna */}
-                <div style={{ textAlign: "left" }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: pctTotal >= 10 ? "#334155" : "#94a3b8" }}>{pctTotal}%</span>
-                </div>
-
-                {/* Barra — usa todo espaço restante */}
-                <div style={{ height: 5, background: "#f1f5f9", borderRadius: 3, overflow: "hidden" }}>
-                  <div style={{ height: 5, borderRadius: 3, width: `${pctBarra}%`, background: cor, transition: "width 0.3s" }} />
-                </div>
-
-                {/* Nome — última coluna */}
+                {/* Nome — primeira coluna */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                   <div style={{ width: 8, height: 8, borderRadius: 2, background: cor, flexShrink: 0 }} />
                   <span 
@@ -157,6 +135,28 @@ export default function PageProjetos() {
                   >
                     {p.nome}
                   </span>
+                </div>
+
+                {/* Barra — usa todo espaço restante */}
+                <div style={{ height: 5, background: "#f1f5f9", borderRadius: 3, overflow: "hidden" }}>
+                  <div style={{ height: 5, borderRadius: 3, width: `${pctBarra}%`, background: cor, transition: "width 0.3s" }} />
+                </div>
+
+                {/* Horas — alinhado à direita */}
+                <div style={{ textAlign: "right" }}>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: cor }}>{fmt(p.totalHoras)}</span>
+                  <span style={{ fontSize: 11, color: "#94a3b8", marginLeft: 2 }}>h</span>
+                </div>
+
+                {/* Colaboradores — alinhado à direita */}
+                <div style={{ textAlign: "right" }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>{p.colaboradores.length}</span>
+                  <span style={{ fontSize: 11, color: "#94a3b8", marginLeft: 4 }}>{p.colaboradores.length === 1 ? "pessoa" : "pessoas"}</span>
+                </div>
+
+                {/* % do total — alinhado à direita */}
+                <div style={{ textAlign: "right" }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: pctTotal >= 10 ? "#334155" : "#94a3b8" }}>{pctTotal}%</span>
                 </div>
               </div>
             );
