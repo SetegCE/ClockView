@@ -6,14 +6,14 @@ import { useState } from "react";
 import { useDados } from "@/app/context/DadosContext";
 import { Loading, Erro } from "@/app/components/LoadingErro";
 import PainelDetalhes from "@/app/components/PainelDetalhes";
-import { corCelula, badgeClass, fmt, fmtData, fmtHoras, trunc, iniciais, numeroSemanaISO } from "@/app/lib/utils";
+import { corCelula, badgeClass, fmt, fmtData, fmtHoras, trunc, iniciais, numeroSemanaISO, totalSemanasAno, intervaloSemanaISO } from "@/app/lib/utils";
 
 type TipoOrdem = "mediaPct" | "nome" | "mediaHoras";
 
 export default function PageDashboard() {
   const { dados, carregando, erro } = useDados();
 
-  const [ordem, setOrdem] = useState<TipoOrdem>("mediaPct");
+  const [ordem, setOrdem] = useState<TipoOrdem>("nome");
   const [colaboradorAberto, setColaboradorAberto] = useState<string | null>(null);
   const [semanaAberta, setSemanaAberta] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
@@ -97,24 +97,11 @@ export default function PageDashboard() {
 
           {/* Heatmap */}
           <div className="cv-heatmap-section">
+            <div style={{ paddingLeft: 20, paddingRight: 20, paddingTop: 16, marginBottom: 12 }}>
+              <span className="cv-toolbar-title">Heatmap de horas</span>
+            </div>
             <div className="cv-toolbar">
               <div className="cv-toolbar-left">
-                <span className="cv-toolbar-title">Heatmap de horas</span>
-                <div className="cv-legend">
-                  {[
-                    { bg: "#D3D1C7", label: "Sem dados" },
-                    { bg: "#E24B4A", label: "≤ 50%" },
-                    { bg: "#EF9F27", label: "≤ 80%" },
-                    { bg: "#3B6D11", label: "> 80%" },
-                  ].map((l) => (
-                    <div key={l.label} className="cv-legend-item">
-                      <div className="cv-legend-rect" style={{ background: l.bg }} />
-                      <span className="cv-legend-label">{l.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="cv-toolbar-right">
                 <div className="cv-search-wrap">
                   <i className="bi bi-search cv-search-icon" />
                   <input
@@ -129,10 +116,25 @@ export default function PageDashboard() {
                   value={ordem}
                   onChange={(e) => setOrdem(e.target.value as TipoOrdem)}
                 >
+                  <option value="nome">Ordenar por nome</option>
                   <option value="mediaPct">Ordenar por %</option>
                   <option value="mediaHoras">Ordenar por horas</option>
-                  <option value="nome">Ordenar por nome</option>
                 </select>
+              </div>
+              <div className="cv-toolbar-right">
+                <div className="cv-legend">
+                  {[
+                    { bg: "#D3D1C7", label: "Sem dados" },
+                    { bg: "#E24B4A", label: "≤ 50%" },
+                    { bg: "#EF9F27", label: "≤ 80%" },
+                    { bg: "#3B6D11", label: "> 80%" },
+                  ].map((l) => (
+                    <div key={l.label} className="cv-legend-item">
+                      <div className="cv-legend-rect" style={{ background: l.bg }} />
+                      <span className="cv-legend-label">{l.label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -141,10 +143,12 @@ export default function PageDashboard() {
                 <div className="cv-week-header">
                   {semanasVisiveis.map((s) => {
                     const numSem = numeroSemanaISO(s);
+                    const ano = parseInt(s.slice(0, 4), 10);
+                    const totalSemanas = totalSemanasAno(ano);
+                    const { inicio, fim } = intervaloSemanaISO(s);
                     return (
-                      <div key={s} className="cv-week-label" title={fmtData(s)}>
-                        <div>Sem</div>
-                        <div>{numSem}</div>
+                      <div key={s} className="cv-week-label" title={`${fmtData(inicio)} - ${fmtData(fim)}`}>
+                        <div>{numSem}/{totalSemanas}</div>
                       </div>
                     );
                   })}

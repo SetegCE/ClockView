@@ -229,7 +229,14 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
   );
 
   const mapaProjetos = new Map(
-    projetos.map((p) => [p.id, p.name]),
+    projetos.map((p) => {
+      // Se tem clientName, formata como "Código - Cliente"
+      // Senão, usa apenas o nome do projeto
+      const nomeFormatado = p.clientName 
+        ? `${p.name} - ${p.clientName}`
+        : p.name;
+      return [p.id, nomeFormatado];
+    }),
   );
 
   const mapaTags = new Map(

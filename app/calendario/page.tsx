@@ -7,7 +7,7 @@ import React from "react";
 import { useDados } from "@/app/context/DadosContext";
 import { Loading, Erro } from "@/app/components/LoadingErro";
 import { PCOLS } from "@/app/lib/constants";
-import { fmt, fmtData, fmtDataLonga, iniciais, numeroSemanaISO, intervaloSemanaISO } from "@/app/lib/utils";
+import { fmt, fmtData, fmtDataLonga, iniciais, numeroSemanaISO, intervaloSemanaISO, totalSemanasAno } from "@/app/lib/utils";
 
 const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const DIAS_SEMANA = ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"];
@@ -77,9 +77,9 @@ export default function PageCalendario() {
     return null;
   }
 
-  // Monta grade do calendário
+  // Monta grade do calendário (Segunda a Domingo - ISO 8601)
   const primeiroDia = new Date(ano, mes, 1).getDay();
-  const offsetSeg = (primeiroDia + 6) % 7;
+  const offsetSeg = (primeiroDia + 6) % 7; // Ajusta para começar na segunda
   const diasNoMes = new Date(ano, mes + 1, 0).getDate();
   const diasMesAnterior = new Date(ano, mes, 0).getDate();
   const totalCelulas = Math.ceil((offsetSeg + diasNoMes) / 7) * 7;
@@ -134,24 +134,32 @@ export default function PageCalendario() {
             {DIAS_SEMANA.map((d) => <div key={d} className="cv-cal-dow">{d}</div>)}
             
             {/* Linhas do calendário com números de semana */}
-            {linhas.map((linha, idx) => (
-              <React.Fragment key={`linha-${idx}`}>
-                {/* Número da semana à esquerda */}
-                <div style={{ 
-                  width: 40, 
-                  flexShrink: 0, 
-                  display: "flex", 
-                  flexDirection: "column",
-                  alignItems: "center", 
-                  justifyContent: "center",
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: "#94a3b8",
-                  gap: 2
-                }}>
-                  <span>Sem</span>
-                  <span>{linha.numSemana}</span>
-                </div>
+            {linhas.map((linha, idx) => {
+              const totalSemanas = totalSemanasAno(ano);
+              const { inicio, fim } = intervaloSemanaISO(linha.celulas[0].dataStr);
+              const tooltipTexto = `${fmtData(inicio)} - ${fmtData(fim)}`;
+              
+              return (
+                <React.Fragment key={`linha-${idx}`}>
+                  {/* Número da semana à esquerda */}
+                  <div 
+                    title={tooltipTexto}
+                    style={{ 
+                      width: 40, 
+                      flexShrink: 0, 
+                      display: "flex", 
+                      flexDirection: "column",
+                      alignItems: "center", 
+                      justifyContent: "center",
+                      fontSize: 10,
+                      fontWeight: 600,
+                      color: "#94a3b8",
+                      gap: 2,
+                      cursor: "help"
+                    }}
+                  >
+                    <span>{linha.numSemana}/{totalSemanas}</span>
+                  </div>
                 
                 {/* Células dos dias */}
                 {linha.celulas.map((cel) => {
@@ -178,7 +186,8 @@ export default function PageCalendario() {
                   );
                 })}
               </React.Fragment>
-            ))}
+            );
+            })}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 16, paddingTop: 12, borderTop: "1px solid #f1f5f9" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

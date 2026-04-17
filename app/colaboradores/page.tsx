@@ -13,6 +13,7 @@ export default function PageColaboradores() {
   const { dados, carregando, erro } = useDados();
   const [expandido, setExpandido] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
+  const [ordem, setOrdem] = useState<"nome" | "mediaPct" | "mediaHoras">("nome");
 
   if (carregando) return <Loading />;
   if (erro) return <Erro mensagem={erro} />;
@@ -20,40 +21,74 @@ export default function PageColaboradores() {
 
   const lista = [...dados.colaboradores]
     .filter((c) => c.nome.toLowerCase().includes(busca.toLowerCase()))
-    .sort((a, b) => b.mediaPct - a.mediaPct);
+    .sort((a, b) => {
+      if (ordem === "nome") return a.nome.localeCompare(b.nome);
+      if (ordem === "mediaHoras") return b.mediaHoras - a.mediaHoras;
+      return b.mediaPct - a.mediaPct;
+    });
 
   return (
     <div className="cv-col" style={{ overflow: "auto" }}>
       <div className="cv-inner">
         {/* Legenda unificada — cores do heatmap + indicadores de semanas */}
         <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #f1f5f9", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-          {/* Linha 1: cores + texto "Clique em um card..." */}
-          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>Média semanal</span>
-              {[
-                { bg: "#D3D1C7", label: "Sem dados" },
-                { bg: "#E24B4A", label: "≤ 50%" },
-                { bg: "#EF9F27", label: "≤ 80%" },
-                { bg: "#3B6D11", label: "> 80%" },
-              ].map((l) => (
-                <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <div style={{ width: 14, height: 9, borderRadius: 3, background: l.bg, flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{l.label}</span>
-                </div>
-              ))}
-            </div>
-            
-            {/* Texto "Clique em um card..." movido para linha 1 */}
-            <span style={{ fontSize: 11, color: "#94a3b8", marginLeft: "auto" }}>— Clique em um card para expandir detalhes</span>
+          {/* Linha 1: cores + texto (direita) */}
+          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", justifyContent: "flex-end" }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>Média semanal</span>
+            {[
+              { bg: "#D3D1C7", label: "Sem dados" },
+              { bg: "#E24B4A", label: "≤ 50%" },
+              { bg: "#EF9F27", label: "≤ 80%" },
+              { bg: "#3B6D11", label: "> 80%" },
+            ].map((l) => (
+              <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <div style={{ width: 14, height: 9, borderRadius: 3, background: l.bg, flexShrink: 0 }} />
+                <span style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{l.label}</span>
+              </div>
+            ))}
+            <span style={{ fontSize: 11, color: "#94a3b8" }}>— Clique em um card para expandir detalhes</span>
           </div>
 
           {/* Divisor */}
           <div style={{ height: 1, background: "#f1f5f9" }} />
 
-          {/* Linha 2: indicadores + campo de busca */}
+          {/* Linha 2: busca + ordenação (esquerda) | indicadores (direita) */}
           <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+            {/* Campo de busca e ordenação à esquerda */}
+            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+              <div style={{ position: "relative" }}>
+                <i className="bi bi-search" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: 13, pointerEvents: "none" }} />
+                <input
+                  type="text"
+                  placeholder="Buscar colaborador..."
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  style={{
+                    fontSize: 13, padding: "7px 12px 7px 32px",
+                    border: "1px solid #e2e8f0", borderRadius: 8,
+                    fontFamily: "inherit", color: "#334155", background: "#fff",
+                    outline: "none", width: 220,
+                  }}
+                />
+              </div>
+              <select
+                value={ordem}
+                onChange={(e) => setOrdem(e.target.value as "nome" | "mediaPct" | "mediaHoras")}
+                style={{
+                  fontSize: 13, padding: "7px 12px",
+                  border: "1px solid #e2e8f0", borderRadius: 8,
+                  fontFamily: "inherit", color: "#334155", background: "#fff",
+                  outline: "none", cursor: "pointer",
+                }}
+              >
+                <option value="nome">Ordenar por nome</option>
+                <option value="mediaPct">Ordenar por %</option>
+                <option value="mediaHoras">Ordenar por horas</option>
+              </select>
+            </div>
+            
+            {/* Indicadores à direita */}
+            <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", marginLeft: "auto" }}>
               <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>Indicadores</span>
               {[
                 { icon: "bi-arrow-up-circle-fill", color: "#00C48C", label: "Acima da meta", desc: "semanas com ≥ 95% das horas" },
@@ -66,23 +101,6 @@ export default function PageColaboradores() {
                   <span style={{ fontSize: 11, color: "#94a3b8" }}>— {item.desc}</span>
                 </div>
               ))}
-            </div>
-            
-            {/* Campo de busca movido para linha 2 */}
-            <div style={{ position: "relative", marginLeft: "auto" }}>
-              <i className="bi bi-search" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: 13, pointerEvents: "none" }} />
-              <input
-                type="text"
-                placeholder="Buscar colaborador..."
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                style={{
-                  fontSize: 13, padding: "7px 12px 7px 32px",
-                  border: "1px solid #e2e8f0", borderRadius: 8,
-                  fontFamily: "inherit", color: "#334155", background: "#fff",
-                  outline: "none", width: 220,
-                }}
-              />
             </div>
           </div>
         </div>

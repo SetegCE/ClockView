@@ -94,3 +94,74 @@ export function iniciais(nome: string): string {
   if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
   return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
 }
+
+/** Calcula o número total de semanas em um ano específico (52 ou 53 conforme ISO 8601) */
+export function totalSemanasAno(ano: number): number {
+  // Validação de entrada
+  if (isNaN(ano) || ano < 1900 || ano > 2100) {
+    console.warn(`Ano inválido: ${ano}, usando 52 semanas`);
+    return 52;
+  }
+  
+  // Última data do ano
+  const ultimoDia = new Date(Date.UTC(ano, 11, 31, 12, 0, 0));
+  const numSemana = numeroSemanaISO(`${ano}-12-31`);
+  
+  // Se a última semana do ano é a semana 1 do próximo ano, então tem 52 semanas
+  // Caso contrário, retorna o número da semana (52 ou 53)
+  if (numSemana === 1) return 52;
+  return numSemana;
+}
+
+/** Parseia o nome de um projeto no formato "#XXXX-X-XXXX (Descrição)" e retorna componentes separados */
+export function parsearNomeProjeto(
+  nome: string,
+  clientName?: string
+): {
+  codigo: string;
+  cliente: string;
+  descricao: string;
+  textoCompleto: string;
+} {
+  // Regex para extrair código no formato #XXXX-X-XXXX
+  const regexCodigo = /#\d{4}-\d+-\d{4}/;
+  const matchCodigo = nome.match(regexCodigo);
+  
+  let codigo = "";
+  let descricao = nome;
+  
+  if (matchCodigo) {
+    codigo = matchCodigo[0];
+    // Remove o código e limpa espaços/hífens extras
+    descricao = nome.replace(regexCodigo, "").trim();
+    // Remove hífen inicial se existir
+    if (descricao.startsWith("-")) {
+      descricao = descricao.slice(1).trim();
+    }
+    // Remove parênteses se a descrição estiver entre eles
+    if (descricao.startsWith("(") && descricao.endsWith(")")) {
+      descricao = descricao.slice(1, -1).trim();
+    }
+  }
+  
+  const cliente = clientName || "";
+  
+  // Formata o texto completo
+  let textoCompleto = "";
+  if (codigo && cliente && descricao) {
+    textoCompleto = `${codigo} - ${cliente} (${descricao})`;
+  } else if (codigo && descricao) {
+    textoCompleto = `${codigo} (${descricao})`;
+  } else if (cliente && descricao) {
+    textoCompleto = `${cliente} (${descricao})`;
+  } else {
+    textoCompleto = descricao;
+  }
+  
+  return {
+    codigo,
+    cliente,
+    descricao,
+    textoCompleto,
+  };
+}

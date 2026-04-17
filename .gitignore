@@ -30,3 +30,6 @@ tsconfig.tsbuildinfo
 
 # Vercel
 .vercel
+
+# Kiro
+.kiro
