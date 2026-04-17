@@ -19,6 +19,7 @@ export default function PageCalendario() {
   const [ano, setAno] = useState(hoje.getFullYear());
   const [mes, setMes] = useState(hoje.getMonth());
   const [diaSelecionado, setDiaSelecionado] = useState<string | null>(null);
+  const [colaboradorExpandido, setColaboradorExpandido] = useState<string | null>(null);
 
   if (carregando) return <Loading />;
   if (erro) return <Erro mensagem={erro} />;
@@ -247,24 +248,153 @@ export default function PageCalendario() {
                     const colab = dados.colaboradores.find((x) => x.nome === c.nome);
                     const pct = colab ? Math.round((c.horas / colab.meta) * 100) : 0;
                     const cor = pct >= 95 ? "#042C53" : pct >= 75 ? "#185FA5" : pct >= 50 ? "#EF9F27" : "#E24B4A";
+                    const expandido = colaboradorExpandido === c.nome;
+                    
+                    // Busca os projetos do colaborador para esta semana
+                    const semanaData = colab?.semanas.find((s) => s.semana === c.semana);
+                    
                     return (
-                      <div key={c.nome} style={{ padding: "10px 12px", background: "#f8fafc", borderRadius: 10, border: "1px solid #f1f5f9" }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <div className="cv-avatar" style={{ width: 28, height: 28, fontSize: 10, flexShrink: 0 }}>{iniciais(c.nome)}</div>
-                            <div>
-                              <div style={{ fontSize: 12, fontWeight: 700, color: "#334155" }}>{c.nome}</div>
-                              {colab && <div style={{ fontSize: 10, color: "#94a3b8" }}>Meta: {colab.meta}h/sem</div>}
+                      <div key={c.nome}>
+                        <button
+                          onClick={() => setColaboradorExpandido(expandido ? null : c.nome)}
+                          style={{ 
+                            width: "100%",
+                            padding: "10px 12px", 
+                            background: expandido ? "#eff6ff" : "#f8fafc", 
+                            borderRadius: 10, 
+                            border: expandido ? "1px solid #bfdbfe" : "1px solid #f1f5f9",
+                            cursor: "pointer",
+                            transition: "all 0.15s",
+                            textAlign: "left"
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!expandido) {
+                              e.currentTarget.style.background = "#f1f5f9";
+                              e.currentTarget.style.borderColor = "#e2e8f0";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!expandido) {
+                              e.currentTarget.style.background = "#f8fafc";
+                              e.currentTarget.style.borderColor = "#f1f5f9";
+                            }
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div className="cv-avatar" style={{ width: 28, height: 28, fontSize: 10, flexShrink: 0 }}>{iniciais(c.nome)}</div>
+                              <div>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: expandido ? "#2563eb" : "#334155" }}>{c.nome}</div>
+                                {colab && <div style={{ fontSize: 10, color: "#94a3b8" }}>Meta: {colab.meta}h/sem</div>}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: "right", display: "flex", alignItems: "center", gap: 6 }}>
+                              <div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: cor }}>{fmt(c.horas)}h</div>
+                                <div style={{ fontSize: 10, fontWeight: 600, color: cor }}>{pct}%</div>
+                              </div>
+                              <i 
+                                className={`bi bi-chevron-${expandido ? "up" : "down"}`} 
+                                style={{ fontSize: 11, color: "#94a3b8" }}
+                              />
                             </div>
                           </div>
-                          <div style={{ textAlign: "right" }}>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: cor }}>{fmt(c.horas)}h</div>
-                            <div style={{ fontSize: 10, fontWeight: 600, color: cor }}>{pct}%</div>
+                          <div style={{ height: 4, background: "#e2e8f0", borderRadius: 2, overflow: "hidden" }}>
+                            <div style={{ height: 4, borderRadius: 2, width: `${Math.min(pct, 100)}%`, background: cor }} />
                           </div>
-                        </div>
-                        <div style={{ height: 4, background: "#e2e8f0", borderRadius: 2, overflow: "hidden" }}>
-                          <div style={{ height: 4, borderRadius: 2, width: `${Math.min(pct, 100)}%`, background: cor }} />
-                        </div>
+                        </button>
+                        
+                        {/* Projetos e atividades expandidas */}
+                        {expandido && semanaData && semanaData.projetos.length > 0 && (
+                          <div style={{ 
+                            marginTop: 8, 
+                            marginLeft: 8,
+                            padding: "12px", 
+                            background: "#fff", 
+                            borderRadius: 8,
+                            border: "1px solid #e2e8f0"
+                          }}>
+                            <div style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+                              Projetos da semana
+                            </div>
+                            {semanaData.projetos.slice(0, 3).map((proj, projIdx) => (
+                              <div 
+                                key={projIdx}
+                                style={{ 
+                                  marginBottom: 12,
+                                  paddingBottom: 12,
+                                  borderBottom: projIdx < Math.min(semanaData.projetos.length, 3) - 1 ? "1px solid #f1f5f9" : "none"
+                                }}
+                              >
+                                <div style={{ 
+                                  fontSize: 11, 
+                                  fontWeight: 700, 
+                                  color: "#334155", 
+                                  marginBottom: 6,
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center"
+                                }}>
+                                  <span>{proj.nome}</span>
+                                  <span style={{ color: PCOLS[projIdx % PCOLS.length] }}>{fmt(proj.horas)}h</span>
+                                </div>
+                                {proj.top3.length > 0 && (
+                                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                    {proj.top3.map((ativ, ativIdx) => (
+                                      <div 
+                                        key={ativIdx}
+                                        style={{ 
+                                          padding: "6px 8px",
+                                          background: "#f8fafc",
+                                          borderRadius: 6,
+                                          fontSize: 11
+                                        }}
+                                      >
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 6, marginBottom: 4 }}>
+                                          <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ color: "#475569", fontWeight: 500, fontSize: 10 }}>
+                                              {ativ.desc}
+                                            </div>
+                                          </div>
+                                          <div style={{ fontSize: 11, fontWeight: 700, color: PCOLS[projIdx % PCOLS.length], flexShrink: 0 }}>
+                                            {fmt(ativ.horas)}h
+                                          </div>
+                                        </div>
+                                        {ativ.tarefa && (
+                                          <div style={{ fontSize: 9, color: "#64748b", marginBottom: 3, display: "flex", alignItems: "center", gap: 3 }}>
+                                            <i className="bi bi-check2-square" />
+                                            <span>{ativ.tarefa}</span>
+                                          </div>
+                                        )}
+                                        {ativ.tags && ativ.tags.length > 0 && (
+                                          <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+                                            {ativ.tags.map((tag, tagIdx) => (
+                                              <span 
+                                                key={tagIdx}
+                                                style={{
+                                                  fontSize: 8,
+                                                  padding: "2px 5px",
+                                                  background: "#e0e7ff",
+                                                  color: "#6366f1",
+                                                  borderRadius: 3,
+                                                  fontWeight: 600,
+                                                  textTransform: "uppercase",
+                                                  letterSpacing: "0.05em"
+                                                }}
+                                              >
+                                                {tag.replace(/^00_/, '')}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
