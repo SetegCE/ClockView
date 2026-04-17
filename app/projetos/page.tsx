@@ -17,6 +17,7 @@ interface ProjetoAgregado {
 export default function PageProjetos() {
   const { dados, carregando, erro } = useDados();
   const [projetoSelecionado, setProjetoSelecionado] = useState<string | null>(null);
+  const [colaboradorExpandido, setColaboradorExpandido] = useState<string | null>(null);
 
   if (carregando) return <Loading />;
   if (erro) return <Erro mensagem={erro} />;
@@ -204,26 +205,126 @@ export default function PageProjetos() {
                   const pctColab = Math.round((c.horas / proj.totalHoras) * 100);
                   const pctBarra = Math.round((c.horas / maxColabHoras) * 100);
                   const colab = dados.colaboradores.find((x) => x.nome === c.nome);
+                  const expandido = colaboradorExpandido === c.nome;
+                  
+                  // Busca os projetos do colaborador para este projeto específico
+                  const projetoDoColab = colab?.topProjetos.find((p) => p.nome === proj.nome);
+                  
                   return (
-                    <div key={c.nome} style={{ padding: "12px 14px", background: "#f8fafc", borderRadius: 12, border: "1px solid #f1f5f9" }}>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <div className="cv-avatar" style={{ width: 32, height: 32, fontSize: 11, flexShrink: 0 }}>
-                            {iniciais(c.nome)}
+                    <div key={c.nome}>
+                      <button
+                        onClick={() => setColaboradorExpandido(expandido ? null : c.nome)}
+                        style={{ 
+                          width: "100%",
+                          padding: "12px 14px", 
+                          background: expandido ? "#eff6ff" : "#f8fafc", 
+                          borderRadius: 12, 
+                          border: expandido ? "1px solid #bfdbfe" : "1px solid #f1f5f9",
+                          cursor: "pointer",
+                          transition: "all 0.15s",
+                          textAlign: "left"
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!expandido) {
+                            e.currentTarget.style.background = "#f1f5f9";
+                            e.currentTarget.style.borderColor = "#e2e8f0";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!expandido) {
+                            e.currentTarget.style.background = "#f8fafc";
+                            e.currentTarget.style.borderColor = "#f1f5f9";
+                          }
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <div className="cv-avatar" style={{ width: 32, height: 32, fontSize: 11, flexShrink: 0 }}>
+                              {iniciais(c.nome)}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: expandido ? "#2563eb" : "#334155" }}>{c.nome}</div>
+                              {colab && <div style={{ fontSize: 11, color: "#94a3b8" }}>Meta: {colab.meta}h/sem</div>}
+                            </div>
                           </div>
-                          <div>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: "#334155" }}>{c.nome}</div>
-                            {colab && <div style={{ fontSize: 11, color: "#94a3b8" }}>Meta: {colab.meta}h/sem</div>}
+                          <div style={{ textAlign: "right", display: "flex", alignItems: "center", gap: 8 }}>
+                            <div>
+                              <div style={{ fontSize: 15, fontWeight: 700, color: PCOLS[idx % PCOLS.length] }}>{fmt(c.horas)}h</div>
+                              <div style={{ fontSize: 11, color: "#94a3b8" }}>{pctColab}% do projeto</div>
+                            </div>
+                            <i 
+                              className={`bi bi-chevron-${expandido ? "up" : "down"}`} 
+                              style={{ fontSize: 12, color: "#94a3b8" }}
+                            />
                           </div>
                         </div>
-                        <div style={{ textAlign: "right" }}>
-                          <div style={{ fontSize: 15, fontWeight: 700, color: PCOLS[idx % PCOLS.length] }}>{fmt(c.horas)}h</div>
-                          <div style={{ fontSize: 11, color: "#94a3b8" }}>{pctColab}% do projeto</div>
+                        <div style={{ height: 5, background: "#e2e8f0", borderRadius: 3, overflow: "hidden" }}>
+                          <div style={{ height: 5, borderRadius: 3, width: `${pctBarra}%`, background: PCOLS[idx % PCOLS.length] }} />
                         </div>
-                      </div>
-                      <div style={{ height: 5, background: "#e2e8f0", borderRadius: 3, overflow: "hidden" }}>
-                        <div style={{ height: 5, borderRadius: 3, width: `${pctBarra}%`, background: PCOLS[idx % PCOLS.length] }} />
-                      </div>
+                      </button>
+                      
+                      {/* Atividades expandidas */}
+                      {expandido && projetoDoColab && projetoDoColab.top3.length > 0 && (
+                        <div style={{ 
+                          marginTop: 8, 
+                          marginLeft: 12,
+                          padding: "12px", 
+                          background: "#fff", 
+                          borderRadius: 8,
+                          border: "1px solid #e2e8f0"
+                        }}>
+                          <div style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+                            Top 3 atividades
+                          </div>
+                          {projetoDoColab.top3.map((ativ, i) => (
+                            <div 
+                              key={i} 
+                              style={{ 
+                                padding: "8px 0", 
+                                borderBottom: i < projetoDoColab.top3.length - 1 ? "1px solid #f1f5f9" : "none"
+                              }}
+                            >
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: 12, color: "#334155", fontWeight: 500, marginBottom: 4 }}>
+                                    {ativ.desc}
+                                  </div>
+                                  {ativ.tarefa && (
+                                    <div style={{ fontSize: 10, color: "#64748b", marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                                      <i className="bi bi-check2-square" />
+                                      <span>{ativ.tarefa}</span>
+                                    </div>
+                                  )}
+                                  {ativ.tags && ativ.tags.length > 0 && (
+                                    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                                      {ativ.tags.map((tag, tagIdx) => (
+                                        <span 
+                                          key={tagIdx}
+                                          style={{
+                                            fontSize: 9,
+                                            padding: "2px 6px",
+                                            background: "#f1f5f9",
+                                            color: "#64748b",
+                                            borderRadius: 4,
+                                            fontWeight: 600,
+                                            textTransform: "uppercase",
+                                            letterSpacing: "0.05em"
+                                          }}
+                                        >
+                                          {tag.replace(/^00_/, '')}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: PCOLS[idx % PCOLS.length], flexShrink: 0 }}>
+                                  {fmt(ativ.horas)}h
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

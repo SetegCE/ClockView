@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useDados } from "@/app/context/DadosContext";
 import { Loading, Erro } from "@/app/components/LoadingErro";
 import { PCOLS, CAT_CONFIG } from "@/app/lib/constants";
-import { badgeClass, fmt, trunc, iniciais } from "@/app/lib/utils";
+import { badgeClass, fmt, fmtHoras, trunc, iniciais } from "@/app/lib/utils";
 import type { Categoria } from "@/lib/types";
 
 export default function PageColaboradores() {
@@ -25,59 +25,65 @@ export default function PageColaboradores() {
   return (
     <div className="cv-col" style={{ overflow: "auto" }}>
       <div className="cv-inner">
-        {/* Campo de busca */}
-        <div style={{ position: "relative" }}>
-          <i className="bi bi-search" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: 13, pointerEvents: "none" }} />
-          <input
-            type="text"
-            placeholder="Buscar colaborador..."
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-            style={{
-              fontSize: 13, padding: "7px 12px 7px 32px",
-              border: "1px solid #e2e8f0", borderRadius: 8,
-              fontFamily: "inherit", color: "#334155", background: "#fff",
-              outline: "none", width: 220,
-            }}
-          />
-        </div>
-
         {/* Legenda unificada — cores do heatmap + indicadores de semanas */}
         <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #f1f5f9", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
-          {/* Linha 1: cores */}
-          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>Média semanal</span>
-            {[
-              { bg: "#D3D1C7", label: "Sem dados" },
-              { bg: "#E24B4A", label: "≤ 50%" },
-              { bg: "#EF9F27", label: "≤ 80%" },
-              { bg: "#3B6D11", label: "> 80%" },
-            ].map((l) => (
-              <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <div style={{ width: 14, height: 9, borderRadius: 3, background: l.bg, flexShrink: 0 }} />
-                <span style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{l.label}</span>
-              </div>
-            ))}
+          {/* Linha 1: cores + texto "Clique em um card..." */}
+          <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>Média semanal</span>
+              {[
+                { bg: "#D3D1C7", label: "Sem dados" },
+                { bg: "#E24B4A", label: "≤ 50%" },
+                { bg: "#EF9F27", label: "≤ 80%" },
+                { bg: "#3B6D11", label: "> 80%" },
+              ].map((l) => (
+                <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <div style={{ width: 14, height: 9, borderRadius: 3, background: l.bg, flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>{l.label}</span>
+                </div>
+              ))}
+            </div>
+            
+            {/* Texto "Clique em um card..." movido para linha 1 */}
+            <span style={{ fontSize: 11, color: "#94a3b8", marginLeft: "auto" }}>— Clique em um card para expandir detalhes</span>
           </div>
 
           {/* Divisor */}
           <div style={{ height: 1, background: "#f1f5f9" }} />
 
-          {/* Linha 2: indicadores */}
-          <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>Indicadores</span>
-            {[
-              { icon: "bi-arrow-up-circle-fill", color: "#00C48C", label: "Acima da meta", desc: "semanas com ≥ 95% das horas" },
-              { icon: "bi-arrow-down-circle-fill", color: "#EF9F27", label: "Abaixo da meta", desc: "semanas com registro < 95%" },
-              { icon: "bi-dash-circle-fill", color: "#94a3b8", label: "Sem registro", desc: "semanas sem apontamento" },
-            ].map((item) => (
-              <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <i className={`bi ${item.icon}`} style={{ color: item.color, fontSize: 13, flexShrink: 0 }} />
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{item.label}</span>
-                <span style={{ fontSize: 11, color: "#94a3b8" }}>— {item.desc}</span>
-              </div>
-            ))}
-            <span style={{ fontSize: 11, color: "#94a3b8", marginLeft: "auto" }}>Clique em um card para expandir detalhes</span>
+          {/* Linha 2: indicadores + campo de busca */}
+          <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0 }}>Indicadores</span>
+              {[
+                { icon: "bi-arrow-up-circle-fill", color: "#00C48C", label: "Acima da meta", desc: "semanas com ≥ 95% das horas" },
+                { icon: "bi-arrow-down-circle-fill", color: "#EF9F27", label: "Abaixo da meta", desc: "semanas com registro < 95%" },
+                { icon: "bi-dash-circle-fill", color: "#94a3b8", label: "Sem registro", desc: "semanas sem apontamento" },
+              ].map((item) => (
+                <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <i className={`bi ${item.icon}`} style={{ color: item.color, fontSize: 13, flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "#334155" }}>{item.label}</span>
+                  <span style={{ fontSize: 11, color: "#94a3b8" }}>— {item.desc}</span>
+                </div>
+              ))}
+            </div>
+            
+            {/* Campo de busca movido para linha 2 */}
+            <div style={{ position: "relative", marginLeft: "auto" }}>
+              <i className="bi bi-search" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", fontSize: 13, pointerEvents: "none" }} />
+              <input
+                type="text"
+                placeholder="Buscar colaborador..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                style={{
+                  fontSize: 13, padding: "7px 12px 7px 32px",
+                  border: "1px solid #e2e8f0", borderRadius: 8,
+                  fontFamily: "inherit", color: "#334155", background: "#fff",
+                  outline: "none", width: 220,
+                }}
+              />
+            </div>
           </div>
         </div>
 
@@ -125,7 +131,7 @@ export default function PageColaboradores() {
                 <div className="cv-colab-meta-row">
                   {/* Meta */}
                   <div className="cv-colab-stat">
-                    <span className="cv-colab-stat-val">{colab.meta}h</span>
+                    <span className="cv-colab-stat-val">{fmtHoras(colab.meta)}</span>
                     <span className="cv-colab-stat-label">Meta semanal</span>
                   </div>
 
@@ -135,7 +141,7 @@ export default function PageColaboradores() {
                   {/* Média com destaque visual */}
                   <div className="cv-colab-stat">
                     <span className="cv-colab-stat-val" style={{ color: corPct, fontSize: 16 }}>
-                      {fmt(colab.mediaHoras)}h
+                      {fmtHoras(colab.mediaHoras)}
                     </span>
                     <span className="cv-colab-stat-label">Média/semana</span>
                   </div>
@@ -181,7 +187,7 @@ export default function PageColaboradores() {
                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
                               <span style={{ fontSize: 13, color: "#475569" }}>{trunc(proj.nome, 30)}</span>
                               <span style={{ fontSize: 13, fontWeight: 700, color: PCOLS[idx % PCOLS.length] }}>
-                                {fmt(proj.horas)}h
+                                {fmtHoras(proj.horas)}
                               </span>
                             </div>
                             <div className="cv-proj-bar-bg">
@@ -205,7 +211,7 @@ export default function PageColaboradores() {
                           <div key={cat} className="cv-cat-row">
                             <div className="cv-cat-header">
                               <span className="cv-cat-label">{cfg.label}</span>
-                              <span className="cv-cat-value">{fmt(h)}h</span>
+                              <span className="cv-cat-value">{fmtHoras(h)}</span>
                             </div>
                             <div className="cv-bar-bg">
                               <div className="cv-bar-fill" style={{ width: `${pct}%`, background: cfg.color }} />

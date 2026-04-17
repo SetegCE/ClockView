@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
   const codigosValidos = [
     process.env.ACCESS_CODE_1,
     process.env.ACCESS_CODE_2,
+    process.env.ACCESS_CODE_3,
   ].filter(Boolean);
 
   if (!codigosValidos.includes(codigo)) {

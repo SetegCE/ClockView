@@ -7,6 +7,8 @@ export interface ClockifyTimeEntry {
   description: string;
   userId: string;
   projectId: string | null;
+  taskId: string | null;
+  tagIds: string[] | null;
   timeInterval: {
     start: string;
     end: string;
@@ -28,6 +30,18 @@ export interface ClockifyProject {
   clientId?: string;
 }
 
+export interface ClockifyTag {
+  id: string;
+  name: string;
+  workspaceId: string;
+}
+
+export interface ClockifyTask {
+  id: string;
+  name: string;
+  projectId: string;
+}
+
 // ─── Modelos internos do ClockView ────────────────────────────────────────────
 
 /** Categorias de atividade */
@@ -37,7 +51,12 @@ export type Categoria = "campo" | "reuniao" | "escritorio" | "gerenciamento";
 export interface ResumoProjeto {
   nome: string;       // nome do cliente/projeto
   horas: number;
-  top3: { desc: string; horas: number }[];
+  top3: { 
+    desc: string; 
+    horas: number;
+    tags?: string[];  // nomes das tags
+    tarefa?: string;  // nome da tarefa
+  }[];
 }
 
 /** Dados de uma semana para um colaborador */

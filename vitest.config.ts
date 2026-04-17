@@ -14,7 +14,7 @@ export default defineConfig({
   },
   test: {
     // Ambiente de teste: jsdom para componentes React, node para utilitários de servidor
-    environment: "node",
+    environment: "jsdom",
     globals: true,
     // Diretório raiz dos testes
     include: ["**/*.test.ts", "**/*.test.tsx"],

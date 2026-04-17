@@ -3,10 +3,11 @@
 // Página /calendario — Calendário mensal com registros de horas
 
 import { useState } from "react";
+import React from "react";
 import { useDados } from "@/app/context/DadosContext";
 import { Loading, Erro } from "@/app/components/LoadingErro";
 import { PCOLS } from "@/app/lib/constants";
-import { fmt, fmtDataLonga, iniciais } from "@/app/lib/utils";
+import { fmt, fmtData, fmtDataLonga, iniciais, numeroSemanaISO, intervaloSemanaISO } from "@/app/lib/utils";
 
 const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const DIAS_SEMANA = ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"];
@@ -100,6 +101,15 @@ export default function PageCalendario() {
     }
   }
 
+  // Agrupa células em linhas de 7 dias e calcula número da semana para cada linha
+  const linhas: Array<{ numSemana: number; celulas: typeof celulas }> = [];
+  for (let i = 0; i < celulas.length; i += 7) {
+    const linhaCelulas = celulas.slice(i, i + 7);
+    // Usa a data da primeira célula (segunda-feira) para calcular o número da semana
+    const numSemana = numeroSemanaISO(linhaCelulas[0].dataStr);
+    linhas.push({ numSemana, celulas: linhaCelulas });
+  }
+
   const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,"0")}-${String(hoje.getDate()).padStart(2,"0")}`;
   const colabsDia = diaSelecionado ? colaboradoresDoDia(diaSelecionado) : [];
   const semanaAtiva = diaSelecionado ? semanaDodia(diaSelecionado) : null;
@@ -118,23 +128,56 @@ export default function PageCalendario() {
             </div>
           </div>
           <div className="cv-cal-grid" style={{ flex: 1, overflow: "hidden" }}>
+            {/* Cabeçalho: espaço vazio + dias da semana */}
+            <div style={{ width: 40, flexShrink: 0 }} />
             {DIAS_SEMANA.map((d) => <div key={d} className="cv-cal-dow">{d}</div>)}
-            {celulas.map((cel) => {
-              const temDado = diaTemDado(cel.dataStr);
-              const ehHoje = cel.dataStr === hojeStr;
-              const selecionado = diaSelecionado === cel.dataStr;
-              let classes = "cv-cal-day";
-              if (!cel.mesAtual) classes += " other-month";
-              if (temDado) classes += " has-data";
-              if (ehHoje) classes += " today";
-              if (selecionado) classes += " selected";
-              return (
-                <div key={cel.dataStr} className={classes} onClick={() => setDiaSelecionado(selecionado ? null : cel.dataStr)}>
-                  <span className="cv-cal-day-num">{cel.dia}</span>
-                  {temDado && <div className="cv-cal-dot" />}
+            
+            {/* Linhas do calendário com números de semana */}
+            {linhas.map((linha, idx) => (
+              <React.Fragment key={`linha-${idx}`}>
+                {/* Número da semana à esquerda */}
+                <div style={{ 
+                  width: 40, 
+                  flexShrink: 0, 
+                  display: "flex", 
+                  flexDirection: "column",
+                  alignItems: "center", 
+                  justifyContent: "center",
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: "#94a3b8",
+                  gap: 2
+                }}>
+                  <span>Sem</span>
+                  <span>{linha.numSemana}</span>
                 </div>
-              );
-            })}
+                
+                {/* Células dos dias */}
+                {linha.celulas.map((cel) => {
+                  const temDado = diaTemDado(cel.dataStr);
+                  const ehHoje = cel.dataStr === hojeStr;
+                  
+                  // Verifica se o dia pertence à semana selecionada
+                  let selecionado = false;
+                  if (diaSelecionado) {
+                    const { inicio, fim } = intervaloSemanaISO(diaSelecionado);
+                    selecionado = cel.dataStr >= inicio && cel.dataStr <= fim;
+                  }
+                  
+                  let classes = "cv-cal-day";
+                  if (!cel.mesAtual) classes += " other-month";
+                  if (temDado) classes += " has-data";
+                  if (ehHoje) classes += " today";
+                  if (selecionado) classes += " selected";
+                  return (
+                    <div key={cel.dataStr} className={classes} onClick={() => setDiaSelecionado(diaSelecionado === cel.dataStr ? null : cel.dataStr)}>
+                      <span className="cv-cal-day-num">{cel.dia}</span>
+                      {temDado && <div className="cv-cal-dot" />}
+                    </div>
+                  );
+                })}
+              </React.Fragment>
+            ))}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 16, paddingTop: 12, borderTop: "1px solid #f1f5f9" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -165,9 +208,20 @@ export default function PageCalendario() {
         ) : (
           <>
             <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid #f1f5f9", flexShrink: 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                {semanaAtiva ? `Semana de ${fmtDataLonga(semanaAtiva)}` : fmtDataLonga(diaSelecionado)}
-              </div>
+              {diaSelecionado && (() => {
+                const numSemana = numeroSemanaISO(diaSelecionado);
+                const { inicio, fim } = intervaloSemanaISO(diaSelecionado);
+                return (
+                  <>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                      Semana {numSemana}
+                    </div>
+                    <div style={{ fontSize: 13, color: "#64748b", marginTop: 2, fontWeight: 500 }}>
+                      {fmtData(inicio)} a {fmtData(fim)}
+                    </div>
+                  </>
+                );
+              })()}
               <div style={{ fontSize: 18, fontWeight: 700, color: "#1e293b", marginTop: 4 }}>
                 {colabsDia.length} colaborador{colabsDia.length !== 1 ? "es" : ""}
               </div>

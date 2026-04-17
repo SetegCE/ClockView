@@ -18,6 +18,7 @@ import type {
   ClockifyTimeEntry,
   ClockifyUser,
   ClockifyProject,
+  ClockifyTag,
   Colaborador,
   DadosDashboard,
   ResumoProjeto,
@@ -33,7 +34,7 @@ interface CacheEntry {
 }
 
 const globalCache = global as typeof global & { _clockviewCache?: CacheEntry };
-const CACHE_TTL_MS = 10 * 60 * 1000;
+const CACHE_TTL_MS = 1 * 60 * 1000; // 1 minuto para debug
 
 export function getCacheDados(chave: string): DadosDashboard | null {
   const entry = globalCache._clockviewCache;
@@ -81,12 +82,24 @@ interface BucketSemana {
   folga: number;
   carnaval: number;
   absence: number;
-  projetos: Map<string, Map<string, number>>; // cliente → desc → horas
+  projetos: Map<string, Map<string, number>>; // cliente → desc → horas (volta ao original)
   cats: Map<Categoria, number>;
+  // Novos mapas para tags e tarefas
+  tagsMap: Map<string, Map<string, string[]>>; // cliente → desc → tags
+  tarefasMap: Map<string, Map<string, string | null>>; // cliente → desc → tarefa
 }
 
 function novoBucket(): BucketSemana {
-  return { work: 0, folga: 0, carnaval: 0, absence: 0, projetos: new Map(), cats: new Map() };
+  return { 
+    work: 0, 
+    folga: 0, 
+    carnaval: 0, 
+    absence: 0, 
+    projetos: new Map(), 
+    cats: new Map(),
+    tagsMap: new Map(),
+    tarefasMap: new Map()
+  };
 }
 
 // ─── Helpers de nome ─────────────────────────────────────────────────────────
@@ -111,13 +124,55 @@ async function buscarUsuarios(): Promise<ClockifyUser[]> {
 }
 
 async function buscarProjetos(): Promise<ClockifyProject[]> {
-  const r = await fetchFromClockify<ClockifyProject[]>(
-    `/workspaces/${CLOCKIFY_WORKSPACE_ID}/projects?limit=500`,
+  const todosProjetos: ClockifyProject[] = [];
+  
+  // Busca projetos ativos com paginação
+  let pageAtivos = 1;
+  while (true) {
+    const r = await fetchFromClockify<ClockifyProject[]>(
+      `/workspaces/${CLOCKIFY_WORKSPACE_ID}/projects?archived=false&page=${pageAtivos}&page-size=500`,
+      CLOCKIFY_API_TOKEN,
+    );
+    if ("status" in r || r.data.length === 0) break;
+    todosProjetos.push(...r.data);
+    if (r.data.length < 500) break;
+    pageAtivos++;
+  }
+  
+  // Busca projetos arquivados com paginação
+  let pageArquivados = 1;
+  while (true) {
+    const r = await fetchFromClockify<ClockifyProject[]>(
+      `/workspaces/${CLOCKIFY_WORKSPACE_ID}/projects?archived=true&page=${pageArquivados}&page-size=500`,
+      CLOCKIFY_API_TOKEN,
+    );
+    if ("status" in r || r.data.length === 0) break;
+    todosProjetos.push(...r.data);
+    if (r.data.length < 500) break;
+    pageArquivados++;
+  }
+  
+  return todosProjetos;
+}
+
+async function buscarTags(): Promise<ClockifyTag[]> {
+  const r = await fetchFromClockify<ClockifyTag[]>(
+    `/workspaces/${CLOCKIFY_WORKSPACE_ID}/tags`,
     CLOCKIFY_API_TOKEN,
   );
-  if ("status" in r) throw new Error(r.message);
+  if ("status" in r) return [];
   return r.data;
 }
+
+async function buscarTarefasProjeto(projectId: string): Promise<Map<string, string>> {
+  const r = await fetchFromClockify<any[]>(
+    `/workspaces/${CLOCKIFY_WORKSPACE_ID}/projects/${projectId}/tasks`,
+    CLOCKIFY_API_TOKEN,
+  );
+  if ("status" in r) return new Map();
+  return new Map(r.data.map((t: any) => [t.id, t.name]));
+}
+
 
 async function buscarEntradasUsuario(
   userId: string,
@@ -145,26 +200,51 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
   const hoje = new Date().toISOString().slice(0, 10);
   const startISO = `${startDate ?? START_DATE}T00:00:00Z`;
   const endISO = `${endDate ?? hoje}T23:59:59Z`;
-  const chaveCache = `${startISO}|${endISO}`;
+  const chaveCache = `v3-${startISO}|${endISO}`; // v3 para forçar nova busca com tags/tarefas corrigidas
 
   // Retorna do cache se ainda válido para o mesmo período
   const cached = getCacheDados(chaveCache);
   if (cached) return cached;
 
-  // Busca usuários e projetos em paralelo
-  const [usuarios, projetos] = await Promise.all([buscarUsuarios(), buscarProjetos()]);
+  // Calcula segunda-feira da semana atual para filtrar semanas futuras
+  const segundaFeiraAtual = getSemana(endDate ? `${endDate}T23:59:59Z` : `${hoje}T23:59:59Z`);
 
-  // Mapas de lookup — usa nome limpo para colaboradores, nome do projeto para projetos
+  // Busca usuários, projetos e tags em paralelo
+  const [usuarios, projetos, tags] = await Promise.all([
+    buscarUsuarios(), 
+    buscarProjetos(),
+    buscarTags()
+  ]);
+
+  console.log('[DEBUG] Total de tags encontradas:', tags.length);
+  if (tags.length > 0) {
+    console.log('[DEBUG] Primeiras 5 tags:', tags.slice(0, 5).map(t => t.name));
+  }
+
+  // Mapas de lookup
   const mapaUsuarios = new Map(
     usuarios
       .filter((u) => !EXCLUDE_USERS.some(ex => limparNome(u.name) === ex || u.name.includes(ex)))
       .map((u) => [u.id, limparNome(u.name)]),
   );
 
-  // Usa o nome do projeto diretamente (contém código + nome completo)
   const mapaProjetos = new Map(
     projetos.map((p) => [p.id, p.name]),
   );
+
+  const mapaTags = new Map(
+    tags.map((t) => [t.id, t.name]),
+  );
+
+  // Cache de tarefas por projeto (busca sob demanda)
+  const cacheTarefas = new Map<string, Map<string, string>>();
+  
+  async function obterNomeTarefa(projectId: string, taskId: string): Promise<string | null> {
+    if (!cacheTarefas.has(projectId)) {
+      cacheTarefas.set(projectId, await buscarTarefasProjeto(projectId));
+    }
+    return cacheTarefas.get(projectId)?.get(taskId) ?? null;
+  }
 
   // Acumulador: nome → semana → bucket
   const raw = new Map<string, Map<string, BucketSemana>>();
@@ -182,7 +262,25 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
       const semana = getSemana(interval.start);
       const horas = parseDuration(interval.duration ?? "");
       const desc = (e.description ?? "").trim();
-      const cliente = mapaProjetos.get(e.projectId ?? "") ?? "SETEG (interno)";
+      const cliente = e.projectId ? (mapaProjetos.get(e.projectId) ?? "Sem Código Registrado") : "Sem Código Registrado";
+
+      // Processa tags
+      const tagNames: string[] = [];
+      if (e.tagIds && e.tagIds.length > 0) {
+        for (const tagId of e.tagIds) {
+          const tagName = mapaTags.get(tagId);
+          if (tagName) tagNames.push(tagName);
+        }
+        if (tagNames.length > 0) {
+          console.log('[DEBUG] Entrada com tags:', { desc, tagNames });
+        }
+      }
+
+      // Processa tarefa (busca sob demanda)
+      let tarefaNome: string | null = null;
+      if (e.taskId && e.projectId) {
+        tarefaNome = await obterNomeTarefa(e.projectId, e.taskId);
+      }
 
       if (!semanas.has(semana)) semanas.set(semana, novoBucket());
       const bucket = semanas.get(semana)!;
@@ -195,9 +293,31 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
         bucket.absence += horas;
       } else {
         bucket.work += horas;
-        if (!bucket.projetos.has(cliente)) bucket.projetos.set(cliente, new Map());
+        if (!bucket.projetos.has(cliente)) {
+          bucket.projetos.set(cliente, new Map());
+          bucket.tagsMap.set(cliente, new Map());
+          bucket.tarefasMap.set(cliente, new Map());
+        }
+        
         const descMap = bucket.projetos.get(cliente)!;
+        const tagsDescMap = bucket.tagsMap.get(cliente)!;
+        const tarefasDescMap = bucket.tarefasMap.get(cliente)!;
+        
+        // Armazena horas
         descMap.set(desc, (descMap.get(desc) ?? 0) + horas);
+        
+        // Armazena tags (acumula tags únicas)
+        if (tagNames.length > 0) {
+          const tagsExistentes = tagsDescMap.get(desc) ?? [];
+          const tagsUnicas = [...new Set([...tagsExistentes, ...tagNames])];
+          tagsDescMap.set(desc, tagsUnicas);
+        }
+        
+        // Armazena tarefa (primeira encontrada)
+        if (tarefaNome && !tarefasDescMap.has(desc)) {
+          tarefasDescMap.set(desc, tarefaNome);
+        }
+        
         const cat = categorizar(desc);
         bucket.cats.set(cat, (bucket.cats.get(cat) ?? 0) + horas);
       }
@@ -212,10 +332,15 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
     raw.set(uname, semanas);
   }
 
-  // Coleta todas as semanas disponíveis
+  // Coleta todas as semanas disponíveis (apenas até segundaFeiraAtual)
   const todasSemanasSet = new Set<string>();
   for (const semanas of Array.from(raw.values())) {
-    for (const s of Array.from(semanas.keys())) todasSemanasSet.add(s);
+    for (const s of Array.from(semanas.keys())) {
+      // Filtra semanas futuras: apenas inclui semanas <= segundaFeiraAtual
+      if (s <= segundaFeiraAtual) {
+        todasSemanasSet.add(s);
+      }
+    }
   }
   const todasSemanas = Array.from(todasSemanasSet).sort();
 
@@ -248,7 +373,8 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
     }> = [];
 
     for (const s of todasSemanas) {
-      if (s < primeiraSemana) {
+      // Marca como skip se for antes da primeira semana OU se for semana futura
+      if (s < primeiraSemana || s > segundaFeiraAtual) {
         semanasOrdenadas.push({
           semana: s, work: 0, folga: 0, carnaval: 0, absence: 0,
           effective: 0, skip: true, carnavalAuto: false, projetos: [], cats: {},
@@ -262,13 +388,25 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
       // Converte projetos para ResumoProjeto[]
       const projetosList: ResumoProjeto[] = [];
       for (const [cliente, descMap] of Array.from(b.projetos.entries())) {
-        const vals = Array.from(descMap.values()) as number[];
-        const totalH = vals.reduce((a: number, v: number) => a + v, 0);
+        const tagsDescMap = b.tagsMap.get(cliente) ?? new Map();
+        const tarefasDescMap = b.tarefasMap.get(cliente) ?? new Map();
+        
         const entries = Array.from(descMap.entries()) as [string, number][];
+        const totalH = entries.reduce((a, [_, horas]) => a + horas, 0);
         const top3 = entries
           .sort((a, b) => b[1] - a[1])
           .slice(0, 3)
-          .map(([desc, horas]) => ({ desc, horas: Math.round(horas * 10) / 10 }));
+          .map(([desc, horas]) => {
+            const tags = tagsDescMap.get(desc);
+            const tarefa = tarefasDescMap.get(desc);
+            
+            return { 
+              desc, 
+              horas: Math.round(horas * 10) / 10,
+              tags: tags && tags.length > 0 ? tags : undefined,
+              tarefa: tarefa ?? undefined
+            };
+          });
         projetosList.push({ nome: cliente, horas: Math.round(totalH * 10) / 10, top3 });
       }
       projetosList.sort((a, b) => b.horas - a.horas);
@@ -314,17 +452,38 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
       }
     }
 
-    // Projetos totais do período
-    const projTotalMap = new Map<string, { horas: number; descs: Map<string, number> }>();
+    // Projetos totais do período (COM tags/tarefas no agregado)
+    const projTotalMap = new Map<string, { 
+      horas: number; 
+      descs: Map<string, { horas: number; tags: Set<string>; tarefa: string | null }> 
+    }>();
     const catsTotalMap = new Map<Categoria, number>();
 
     for (const s of semanasOrdenadas) {
       for (const pr of s.projetos) {
-        if (!projTotalMap.has(pr.nome)) projTotalMap.set(pr.nome, { horas: 0, descs: new Map() });
+        if (!projTotalMap.has(pr.nome)) {
+          projTotalMap.set(pr.nome, { horas: 0, descs: new Map() });
+        }
         const pt = projTotalMap.get(pr.nome)!;
         pt.horas += pr.horas;
         for (const t of pr.top3) {
-          pt.descs.set(t.desc, (pt.descs.get(t.desc) ?? 0) + t.horas);
+          if (!pt.descs.has(t.desc)) {
+            pt.descs.set(t.desc, { horas: 0, tags: new Set(), tarefa: null });
+          }
+          const descData = pt.descs.get(t.desc)!;
+          descData.horas += t.horas;
+          
+          // Agrega tags (união de todas as tags)
+          if (t.tags) {
+            for (const tag of t.tags) {
+              descData.tags.add(tag);
+            }
+          }
+          
+          // Armazena primeira tarefa encontrada
+          if (t.tarefa && !descData.tarefa) {
+            descData.tarefa = t.tarefa;
+          }
         }
       }
       for (const [cat, h] of Object.entries(s.cats) as [Categoria, number][]) {
@@ -339,9 +498,14 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
         nome,
         horas: Math.round(pv.horas * 10) / 10,
         top3: Array.from(pv.descs.entries())
-          .sort((a, b) => b[1] - a[1])
+          .sort((a, b) => b[1].horas - a[1].horas)
           .slice(0, 3)
-          .map(([desc, horas]) => ({ desc, horas: Math.round(horas * 10) / 10 })),
+          .map(([desc, data]) => ({
+            desc,
+            horas: Math.round(data.horas * 10) / 10,
+            tags: data.tags.size > 0 ? Array.from(data.tags) : undefined,
+            tarefa: data.tarefa ?? undefined
+          })),
       }));
 
     const catsTotal: Partial<Record<Categoria, number>> = {};
@@ -387,6 +551,17 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
 
   // Ordena por % média decrescente
   colaboradores.sort((a, b) => b.mediaPct - a.mediaPct);
+
+  // DEBUG: Log para verificar se tags estão nos dados
+  const primeiroColab = colaboradores[0];
+  if (primeiroColab && primeiroColab.topProjetos.length > 0) {
+    const primeiroProjeto = primeiroColab.topProjetos[0];
+    console.log('[DEBUG] Primeiro colaborador:', primeiroColab.nome);
+    console.log('[DEBUG] Primeiro projeto:', primeiroProjeto.nome);
+    console.log('[DEBUG] Primeira atividade:', JSON.stringify(primeiroProjeto.top3[0]));
+    console.log('[DEBUG] Tem tags?', primeiroProjeto.top3[0].tags ? 'SIM' : 'NÃO');
+    console.log('[DEBUG] Tem tarefa?', primeiroProjeto.top3[0].tarefa ? 'SIM' : 'NÃO');
+  }
 
   const resultado: DadosDashboard = {
     atualizadoEm: new Date().toISOString(),

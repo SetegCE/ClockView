@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useDados } from "@/app/context/DadosContext";
 import { Loading, Erro } from "@/app/components/LoadingErro";
 import PainelDetalhes from "@/app/components/PainelDetalhes";
-import { corCelula, badgeClass, fmt, fmtData, trunc, iniciais, numeroSemanaISO } from "@/app/lib/utils";
+import { corCelula, badgeClass, fmt, fmtData, fmtHoras, trunc, iniciais, numeroSemanaISO } from "@/app/lib/utils";
 
 type TipoOrdem = "mediaPct" | "nome" | "mediaHoras";
 
@@ -139,16 +139,19 @@ export default function PageDashboard() {
             <div className="cv-heatmap-scroll">
               <div className="cv-heatmap-inner">
                 <div className="cv-week-header">
-                  {semanasVisiveis.map((s) => (
-                    <div key={s} className="cv-week-label" title={fmtData(s)}>
-                      Sem {numeroSemanaISO(s)}
-                    </div>
-                  ))}
+                  {semanasVisiveis.map((s) => {
+                    const numSem = numeroSemanaISO(s);
+                    return (
+                      <div key={s} className="cv-week-label" title={fmtData(s)}>
+                        <div>Sem</div>
+                        <div>{numSem}</div>
+                      </div>
+                    );
+                  })}
                 </div>
                 <div className="cv-rows">
                   {lista.map((colab) => {
                     const selecionado = colaboradorAberto === colab.nome;
-                    const partes = colab.nome.trim().split(/\s+/);
                     return (
                       <div key={colab.nome} className={`cv-row${selecionado ? " selected" : ""}`}>
                         <button
@@ -156,12 +159,7 @@ export default function PageDashboard() {
                           onClick={() => setColaboradorAberto(selecionado ? null : colab.nome)}
                         >
                           <div className="cv-avatar">{iniciais(colab.nome)}</div>
-                          <div>
-                            <div className="cv-name-first">{partes[0]}</div>
-                            {partes.length > 1 && (
-                              <div className="cv-name-last">{trunc(partes.slice(1).join(" "), 18)}</div>
-                            )}
-                          </div>
+                          <div className="cv-name-full">{trunc(colab.nome, 28)}</div>
                         </button>
                         <div className="cv-cells">
                           {semanasVisiveis.map((s) => {
@@ -189,20 +187,20 @@ export default function PageDashboard() {
                                 key={s}
                                 className={`cv-cell${sd.carnavalAuto ? " cv-cell-carnav" : ""}${destacado ? " highlighted" : ""}`}
                                 style={{ background: bg, color: fg }}
-                                title={`${colab.nome} — Sem ${numeroSemanaISO(s)} (${fmtData(s)}): ${fmt(sd.horas)}h (${sd.pct}%)`}
+                                title={`${colab.nome} — Sem ${numeroSemanaISO(s)} (${fmtData(s)}): ${fmtHoras(sd.horas)} (${sd.pct}%)`}
                                 onClick={() => {
                                   setColaboradorAberto(colab.nome);
                                   setSemanaAberta(destacado ? null : s);
                                 }}
                               >
-                                {fmt(sd.horas)}
+                                {fmtHoras(sd.horas)}
                               </button>
                             );
                           })}
                         </div>
                         <div className="cv-row-meta">
                           <span className={badgeClass(colab.mediaPct)}>{colab.mediaPct}%</span>
-                          <span className="cv-hours">{fmt(colab.mediaHoras)}h / {colab.meta}h</span>
+                          <span className="cv-hours">{fmtHoras(colab.mediaHoras)} / {fmtHoras(colab.meta)}</span>
                         </div>
                       </div>
                     );

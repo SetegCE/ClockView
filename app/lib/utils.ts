@@ -22,6 +22,32 @@ export function numeroSemanaISO(dataStr: string): number {
   return semana;
 }
 
+/** Retorna o intervalo de datas (início e fim) de uma semana ISO 8601 */
+export function intervaloSemanaISO(dataStr: string): { inicio: string; fim: string } {
+  const d = new Date(dataStr + "T12:00:00Z");
+  // Encontra a segunda-feira da semana (ISO 8601: semana começa na segunda)
+  const diaSemana = d.getUTCDay();
+  const diasAteSegunda = (diaSemana === 0 ? -6 : 1 - diaSemana);
+  const segunda = new Date(d);
+  segunda.setUTCDate(d.getUTCDate() + diasAteSegunda);
+  
+  // Domingo é 6 dias após a segunda
+  const domingo = new Date(segunda);
+  domingo.setUTCDate(segunda.getUTCDate() + 6);
+  
+  const formatarData = (date: Date) => {
+    const ano = date.getUTCFullYear();
+    const mes = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const dia = String(date.getUTCDate()).padStart(2, "0");
+    return `${ano}-${mes}-${dia}`;
+  };
+  
+  return {
+    inicio: formatarData(segunda),
+    fim: formatarData(domingo),
+  };
+}
+
 /** Retorna classe CSS do badge conforme percentual — paleta semáforo */
 export function badgeClass(pct: number): string {
   if (pct > 80) return "cv-badge green";
@@ -32,6 +58,13 @@ export function badgeClass(pct: number): string {
 /** Formata número com 1 casa decimal */
 export function fmt(n: number): string {
   return n.toFixed(1);
+}
+
+/** Converte horas decimais para formato HH:MM */
+export function fmtHoras(horas: number): string {
+  const h = Math.floor(horas);
+  const m = Math.round((horas - h) * 60);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
 /** Formata data YYYY-MM-DD → DD/MM */
