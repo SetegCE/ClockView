@@ -309,7 +309,7 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
         // Armazena tags (acumula tags únicas)
         if (tagNames.length > 0) {
           const tagsExistentes = tagsDescMap.get(desc) ?? [];
-          const tagsUnicas = [...new Set([...tagsExistentes, ...tagNames])];
+          const tagsUnicas = Array.from(new Set([...tagsExistentes, ...tagNames]));
           tagsDescMap.set(desc, tagsUnicas);
         }
         
