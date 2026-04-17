@@ -73,6 +73,20 @@ export function DadosProvider({ children }: { children: ReactNode }) {
     atualizar(false);
   }, [atualizar, pathname]);
 
+  // Atualização automática a cada hora
+  useEffect(() => {
+    if (pathname === "/login") return;
+
+    // Configura intervalo de 1 hora (3600000 ms)
+    const intervalo = setInterval(() => {
+      console.log('[AUTO-UPDATE] Atualizando dados automaticamente...');
+      atualizar(true); // Força atualização para ignorar cache
+    }, 3600000); // 1 hora
+
+    // Limpa o intervalo quando o componente é desmontado
+    return () => clearInterval(intervalo);
+  }, [atualizar, pathname]);
+
   return (
     <DadosContext.Provider value={{
       dados, carregando, atualizando, erro,

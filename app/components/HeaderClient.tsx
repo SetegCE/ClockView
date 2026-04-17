@@ -60,7 +60,21 @@ export default function HeaderClient() {
         </div>
 
         {tsAtualizado && (
-          <span className="cv-header-ts">Atualizado {tsAtualizado}</span>
+          <span 
+            className="cv-header-ts" 
+            title="Os dados são atualizados automaticamente a cada hora"
+          >
+            Atualizado {tsAtualizado}
+            <i 
+              className="bi bi-clock-history" 
+              style={{ 
+                marginLeft: 6, 
+                fontSize: 11, 
+                color: "#94a3b8",
+                cursor: "help"
+              }} 
+            />
+          </span>
         )}
         <div className={`cv-status-dot${atualizando ? " updating" : erro ? " error" : ""}`} />
         <button
