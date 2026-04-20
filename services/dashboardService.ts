@@ -342,6 +342,27 @@ export async function processarDashboard(startDate?: string, endDate?: string, f
     const entradas = await buscarEntradasUsuario(uid, startISO, endISO);
     console.log(`[DEBUG] ${uname}: ${entradas.length} entradas encontradas no período`);
     
+    // Log detalhado para TI
+    if (uname.toLowerCase().includes("ti")) {
+      console.log(`[DEBUG TI] Processando ${entradas.length} entradas...`);
+      const hoje = new Date().toISOString().slice(0, 10);
+      const entradaHoje = entradas.filter(e => e.timeInterval?.start?.startsWith(hoje));
+      console.log(`[DEBUG TI] Entradas de HOJE (${hoje}): ${entradaHoje.length}`);
+      if (entradaHoje.length > 0) {
+        for (const e of entradaHoje) {
+          console.log(`[DEBUG TI] Entrada:`, {
+            start: e.timeInterval?.start,
+            duration: e.timeInterval?.duration,
+            desc: e.description?.substring(0, 50),
+            projectId: e.projectId
+          });
+        }
+      }
+      // Log de TODAS as entradas de abril
+      const entradasAbril = entradas.filter(e => e.timeInterval?.start?.startsWith("2026-04"));
+      console.log(`[DEBUG TI] Total de entradas em ABRIL: ${entradasAbril.length}`);
+    }
+    
     // Log detalhado para Henrique
     if (uname.toLowerCase().includes("henrique")) {
       console.log(`[DEBUG HENRIQUE] Processando ${entradas.length} entradas...`);
@@ -371,11 +392,12 @@ export async function processarDashboard(startDate?: string, endDate?: string, f
       const desc = (e.description ?? "").trim();
       const cliente = e.projectId ? (mapaProjetos.get(e.projectId) ?? "Sem Código Registrado") : "Sem Código Registrado";
 
-      // Log detalhado para Henrique e Laís
+      // Log detalhado para TI, Henrique e Laís
+      const isTI = uname.toLowerCase().includes("ti") && !uname.toLowerCase().includes("cristina");
       const isHenrique = uname.toLowerCase().includes("henrique");
       const isLais = uname.toLowerCase().includes("laís") || uname.toLowerCase().includes("lais");
       
-      if ((isHenrique || isLais) && interval.start.startsWith("2026-04")) {
+      if ((isTI || isHenrique || isLais) && interval.start.startsWith("2026-04")) {
         console.log(`[DEBUG ${uname.toUpperCase()}] Entrada de abril:`, {
           data: interval.start.slice(0, 10),
           semanaCalculada: semana,
@@ -383,7 +405,8 @@ export async function processarDashboard(startDate?: string, endDate?: string, f
           desc: desc.substring(0, 50),
           isCarnaval: isCarnaval(desc),
           isFolga: isFolga(desc),
-          isExcluida: isExcluida(desc)
+          isExcluida: isExcluida(desc),
+          cliente
         });
       }
 
