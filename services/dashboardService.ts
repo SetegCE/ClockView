@@ -115,8 +115,9 @@ function limparNome(nome: string): string {
 // ─── Busca de dados brutos ────────────────────────────────────────────────────
 
 async function buscarUsuarios(): Promise<ClockifyUser[]> {
+  // Busca usuários ACTIVE (a API sem status retorna apenas os primeiros 50)
   const r = await fetchFromClockify<ClockifyUser[]>(
-    `/workspaces/${CLOCKIFY_WORKSPACE_ID}/users?limit=200`,
+    `/workspaces/${CLOCKIFY_WORKSPACE_ID}/users?status=ACTIVE&limit=200`,
     CLOCKIFY_API_TOKEN,
   );
   if ("status" in r) throw new Error(r.message);
