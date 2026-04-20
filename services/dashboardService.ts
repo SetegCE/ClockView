@@ -115,13 +115,23 @@ function limparNome(nome: string): string {
 // ─── Busca de dados brutos ────────────────────────────────────────────────────
 
 async function buscarUsuarios(): Promise<ClockifyUser[]> {
-  // Busca usuários ACTIVE (a API sem status retorna apenas os primeiros 50)
-  const r = await fetchFromClockify<ClockifyUser[]>(
-    `/workspaces/${CLOCKIFY_WORKSPACE_ID}/users?status=ACTIVE&limit=200`,
-    CLOCKIFY_API_TOKEN,
-  );
-  if ("status" in r) throw new Error(r.message);
-  return r.data;
+  // Busca TODOS os usuários ACTIVE com paginação
+  const todosUsuarios: ClockifyUser[] = [];
+  let page = 1;
+  
+  while (true) {
+    const r = await fetchFromClockify<ClockifyUser[]>(
+      `/workspaces/${CLOCKIFY_WORKSPACE_ID}/users?status=ACTIVE&page=${page}&page-size=200`,
+      CLOCKIFY_API_TOKEN,
+    );
+    if ("status" in r) throw new Error(r.message);
+    if (r.data.length === 0) break;
+    todosUsuarios.push(...r.data);
+    if (r.data.length < 200) break;
+    page++;
+  }
+  
+  return todosUsuarios;
 }
 
 async function buscarProjetos(): Promise<ClockifyProject[]> {
@@ -157,21 +167,43 @@ async function buscarProjetos(): Promise<ClockifyProject[]> {
 }
 
 async function buscarTags(): Promise<ClockifyTag[]> {
-  const r = await fetchFromClockify<ClockifyTag[]>(
-    `/workspaces/${CLOCKIFY_WORKSPACE_ID}/tags`,
-    CLOCKIFY_API_TOKEN,
-  );
-  if ("status" in r) return [];
-  return r.data;
+  // Busca TODAS as tags com paginação
+  const todasTags: ClockifyTag[] = [];
+  let page = 1;
+  
+  while (true) {
+    const r = await fetchFromClockify<ClockifyTag[]>(
+      `/workspaces/${CLOCKIFY_WORKSPACE_ID}/tags?page=${page}&page-size=200`,
+      CLOCKIFY_API_TOKEN,
+    );
+    if ("status" in r) return todasTags;
+    if (r.data.length === 0) break;
+    todasTags.push(...r.data);
+    if (r.data.length < 200) break;
+    page++;
+  }
+  
+  return todasTags;
 }
 
 async function buscarTarefasProjeto(projectId: string): Promise<Map<string, string>> {
-  const r = await fetchFromClockify<any[]>(
-    `/workspaces/${CLOCKIFY_WORKSPACE_ID}/projects/${projectId}/tasks`,
-    CLOCKIFY_API_TOKEN,
-  );
-  if ("status" in r) return new Map();
-  return new Map(r.data.map((t: any) => [t.id, t.name]));
+  // Busca TODAS as tarefas do projeto com paginação
+  const todasTarefas: any[] = [];
+  let page = 1;
+  
+  while (true) {
+    const r = await fetchFromClockify<any[]>(
+      `/workspaces/${CLOCKIFY_WORKSPACE_ID}/projects/${projectId}/tasks?page=${page}&page-size=200`,
+      CLOCKIFY_API_TOKEN,
+    );
+    if ("status" in r) break;
+    if (r.data.length === 0) break;
+    todasTarefas.push(...r.data);
+    if (r.data.length < 200) break;
+    page++;
+  }
+  
+  return new Map(todasTarefas.map((t: any) => [t.id, t.name]));
 }
 
 
@@ -401,9 +433,9 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
         
         const entries = Array.from(descMap.entries()) as [string, number][];
         const totalH = entries.reduce((a, [_, horas]) => a + horas, 0);
-        const top3 = entries
+        // Mostra TODAS as atividades (sem limite de top 3)
+        const todasAtividades = entries
           .sort((a, b) => b[1] - a[1])
-          .slice(0, 3)
           .map(([desc, horas]) => {
             const tags = tagsDescMap.get(desc);
             const tarefa = tarefasDescMap.get(desc);
@@ -415,7 +447,7 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
               tarefa: tarefa ?? undefined
             };
           });
-        projetosList.push({ nome: cliente, horas: Math.round(totalH * 10) / 10, top3 });
+        projetosList.push({ nome: cliente, horas: Math.round(totalH * 10) / 10, top3: todasAtividades });
       }
       projetosList.sort((a, b) => b.horas - a.horas);
 
@@ -499,15 +531,15 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
       }
     }
 
+    // Mostra TODOS os projetos (sem limite de top 8)
     const topProjetos: ResumoProjeto[] = Array.from(projTotalMap.entries())
       .sort((a, b) => b[1].horas - a[1].horas)
-      .slice(0, 8)
       .map(([nome, pv]) => ({
         nome,
         horas: Math.round(pv.horas * 10) / 10,
+        // Mostra TODAS as atividades (sem limite de top 3)
         top3: Array.from(pv.descs.entries())
           .sort((a, b) => b[1].horas - a[1].horas)
-          .slice(0, 3)
           .map(([desc, data]) => ({
             desc,
             horas: Math.round(data.horas * 10) / 10,
