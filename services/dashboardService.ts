@@ -261,6 +261,9 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
       .map((u) => [u.id, limparNome(u.name)]),
   );
 
+  console.log('[DEBUG] Total de usuários buscados da API:', usuarios.length);
+  console.log('[DEBUG] Usuários após filtro EXCLUDE_USERS:', mapaUsuarios.size);
+
   const mapaProjetos = new Map(
     projetos.map((p) => {
       // Se tem clientName, formata como "Código - Cliente"
@@ -396,7 +399,10 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
       if (!b) return false;
       return b.work + b.folga + b.carnaval + b.absence > 0;
     });
-    if (!primeiraSemana) continue;
+    if (!primeiraSemana) {
+      console.log(`[DEBUG] Colaborador SEM DADOS no período: ${nome}`);
+      continue;
+    }
 
     // Monta array de semanas ordenadas
     const semanasOrdenadas: Array<{
@@ -591,6 +597,9 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
 
   // Ordena por % média decrescente
   colaboradores.sort((a, b) => b.mediaPct - a.mediaPct);
+
+  console.log('[DEBUG] Total de colaboradores no resultado final:', colaboradores.length);
+  console.log('[DEBUG] Colaboradores incluídos:', colaboradores.map(c => c.nome).join(', '));
 
   // DEBUG: Log para verificar se tags estão nos dados
   const primeiroColab = colaboradores[0];
