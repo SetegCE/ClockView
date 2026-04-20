@@ -27,35 +27,30 @@ import type {
   Categoria,
 } from "@/lib/types";
 
-// ─── Cache em memória (persiste entre requisições no mesmo processo) ──────────
+// ─── Cache DESABILITADO - sempre busca dados novos da API ──────────────────────
 interface CacheEntry {
   dados: DadosDashboard;
   timestamp: number;
-  chave: string; // inclui período para evitar conflito
+  chave: string;
 }
 
 const globalCache = global as typeof global & { _clockviewCache?: CacheEntry };
-const CACHE_TTL_MS = 30 * 1000; // 30 segundos - atualização mais frequente
+const CACHE_TTL_MS = 0; // CACHE DESABILITADO - sempre busca dados novos
 
 export function getCacheDados(chave: string): DadosDashboard | null {
-  const entry = globalCache._clockviewCache;
-  if (!entry) return null;
-  if (entry.chave !== chave) return null;
-  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
-    console.log('[CACHE] Cache expirado, buscando dados novos da API');
-    return null;
-  }
-  const idadeCache = Math.round((Date.now() - entry.timestamp) / 1000);
-  console.log(`[CACHE] Usando cache (idade: ${idadeCache}s / TTL: ${CACHE_TTL_MS / 1000}s)`);
-  return entry.dados;
+  // CACHE DESABILITADO - sempre retorna null para forçar busca na API
+  console.log('[CACHE] Cache desabilitado - buscando dados novos da API');
+  return null;
 }
 
 function setCacheDados(dados: DadosDashboard, chave: string) {
-  globalCache._clockviewCache = { dados, timestamp: Date.now(), chave };
+  // CACHE DESABILITADO - não salva nada
+  console.log('[CACHE] Cache desabilitado - dados não serão salvos em cache');
 }
 
 export function invalidarCache() {
-  globalCache._clockviewCache = undefined;
+  // CACHE DESABILITADO - não há cache para invalidar
+  console.log('[CACHE] Cache desabilitado - nada para invalidar');
 }
 
 // ─── Estruturas internas de acumulação ────────────────────────────────────────
@@ -271,13 +266,8 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
   const hoje = new Date().toISOString().slice(0, 10);
   const startISO = `${startDate ?? START_DATE}T00:00:00Z`;
   const endISO = `${endDate ?? hoje}T23:59:59Z`;
-  const chaveCache = `v4-${startISO}|${endISO}`; // v4 para forçar nova busca
 
-  // Retorna do cache se ainda válido para o mesmo período
-  const cached = getCacheDados(chaveCache);
-  if (cached) return cached;
-
-  console.log('[API] Buscando dados novos da API do Clockify...');
+  console.log('[API] CACHE DESABILITADO - Buscando dados SEMPRE da API do Clockify');
   console.log(`[API] Período: ${startDate ?? START_DATE} até ${endDate ?? hoje}`);
 
   // Calcula segunda-feira da semana atual para filtrar semanas futuras
@@ -696,7 +686,7 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
     colaboradores,
   };
 
-  // Salva no cache com a chave do período
-  setCacheDados(resultado, chaveCache);
+  // CACHE DESABILITADO - retorna direto sem salvar
+  console.log('[API] Retornando dados FRESCOS da API (sem cache)');
   return resultado;
 }
