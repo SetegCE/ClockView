@@ -3,28 +3,22 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { processarDashboard, invalidarCache } from "@/services/dashboardService";
+import { START_DATE } from "@/config/clockify";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-/** Retorna o primeiro dia do mês atual no formato YYYY-MM-DD */
-function primeiroDiaMes(): string {
+/** Retorna a data de hoje no formato YYYY-MM-DD */
+function hoje(): string {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-}
-
-/** Retorna o último dia do mês atual no formato YYYY-MM-DD */
-function ultimoDiaMes(): string {
-  const d = new Date();
-  const ultimo = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-  return `${ultimo.getFullYear()}-${String(ultimo.getMonth() + 1).padStart(2, "0")}-${String(ultimo.getDate()).padStart(2, "0")}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const force = params.get("force") === "true";
-  const inicio = params.get("inicio") ?? primeiroDiaMes();
-  const fim = params.get("fim") ?? ultimoDiaMes();
+  const inicio = params.get("inicio") ?? START_DATE;
+  const fim = params.get("fim") ?? hoje();
 
   console.log(`[API] GET /api/dashboard - force: ${force}, período: ${inicio} a ${fim}`);
 
