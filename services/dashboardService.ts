@@ -393,14 +393,42 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
   for (const [nome, semanas] of Array.from(raw.entries())) {
     const meta = PART_TIME_USERS[nome] ?? DEFAULT_WEEKLY_HOURS;
 
-    // Primeira semana com algum dado
+    // Primeira semana com algum dado (ou null se não tiver dados)
     const primeiraSemana = todasSemanas.find((s) => {
       const b = semanas.get(s);
       if (!b) return false;
       return b.work + b.folga + b.carnaval + b.absence > 0;
     });
+    
+    // Se não tem dados, cria colaborador com valores zerados
     if (!primeiraSemana) {
       console.log(`[DEBUG] Colaborador SEM DADOS no período: ${nome}`);
+      
+      // Cria semanas vazias para o colaborador
+      const semanasVazias: SemanaColaborador[] = todasSemanas.map((s) => ({
+        semana: s,
+        horas: 0,
+        pct: 0,
+        skip: true,
+        carnavalAuto: false,
+        projetos: [],
+        cats: {},
+      }));
+      
+      colaboradores.push({
+        nome,
+        meta,
+        mediaHoras: 0,
+        mediaPct: 0,
+        semanasAcima: 0,
+        semanasAbaixo: 0,
+        semanasAusente: todasSemanas.length,
+        primeiraSemana: todasSemanas[0] || "",
+        semanas: semanasVazias,
+        topProjetos: [],
+        catsTotal: {},
+      });
+      
       continue;
     }
 
