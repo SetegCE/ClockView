@@ -10,6 +10,7 @@ import {
   DEFAULT_WEEKLY_HOURS,
   PART_TIME_USERS,
   EXCLUDE_USERS,
+  ALLOWED_USERS,
   CARNAVAL_WEEK,
   CARNAVAL_HOURS,
 } from "@/config/clockify";
@@ -110,6 +111,38 @@ function novoBucket(): BucketSemana {
  */
 function limparNome(nome: string): string {
   return nome.replace(/\s*\|\s*SETEG\s*$/i, "").trim();
+}
+
+/**
+ * Normaliza nome para comparação (remove acentos, converte para maiúsculas)
+ */
+function normalizarNome(nome: string): string {
+  return nome
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .trim();
+}
+
+/**
+ * Verifica se o nome do colaborador está na whitelist (ALLOWED_USERS)
+ */
+function estaPermitido(nome: string): boolean {
+  const nomeNormalizado = normalizarNome(nome);
+  
+  // Verifica correspondência exata
+  for (const permitido of ALLOWED_USERS) {
+    const permitidoNorm = normalizarNome(permitido);
+    if (nomeNormalizado === permitidoNorm) return true;
+    
+    // Verifica correspondência parcial (todas as palavras do nome estão no permitido)
+    const palavrasNome = nomeNormalizado.split(/\s+/);
+    const palavrasPermitido = permitidoNorm.split(/\s+/);
+    
+    if (palavrasNome.every(p => palavrasPermitido.includes(p))) return true;
+  }
+  
+  return false;
 }
 
 // ─── Busca de dados brutos ────────────────────────────────────────────────────
@@ -254,15 +287,22 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
     console.log('[DEBUG] Primeiras 5 tags:', tags.slice(0, 5).map(t => t.name));
   }
 
-  // Mapas de lookup
+  // Mapas de lookup - filtra por EXCLUDE_USERS e ALLOWED_USERS (whitelist)
   const mapaUsuarios = new Map(
     usuarios
-      .filter((u) => !EXCLUDE_USERS.some(ex => limparNome(u.name) === ex || u.name.includes(ex)))
+      .filter((u) => {
+        const nomeLimpo = limparNome(u.name);
+        // Exclui usuários da lista EXCLUDE_USERS
+        if (EXCLUDE_USERS.some(ex => nomeLimpo === ex || u.name.includes(ex))) return false;
+        // Inclui APENAS usuários da whitelist ALLOWED_USERS
+        return estaPermitido(nomeLimpo);
+      })
       .map((u) => [u.id, limparNome(u.name)]),
   );
 
   console.log('[DEBUG] Total de usuários buscados da API:', usuarios.length);
-  console.log('[DEBUG] Usuários após filtro EXCLUDE_USERS:', mapaUsuarios.size);
+  console.log('[DEBUG] Usuários após filtro EXCLUDE_USERS + ALLOWED_USERS:', mapaUsuarios.size);
+  console.log('[DEBUG] Usuários permitidos:', Array.from(mapaUsuarios.values()).sort().join(', '));
 
   const mapaProjetos = new Map(
     projetos.map((p) => {
