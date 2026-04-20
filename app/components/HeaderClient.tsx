@@ -86,23 +86,6 @@ export default function HeaderClient() {
           <i className={`bi bi-arrow-clockwise${atualizando ? " spin" : ""}`} />
           {atualizando ? "Atualizando…" : "Atualizar"}
         </button>
-        <button
-          className="cv-btn-update"
-          style={{ marginLeft: 8, background: "#dc2626" }}
-          onClick={() => {
-            console.log('[HARD REFRESH] Limpando cache e recarregando página...');
-            // Limpa localStorage
-            localStorage.clear();
-            // Limpa sessionStorage
-            sessionStorage.clear();
-            // Recarrega a página sem cache
-            window.location.reload();
-          }}
-          title="Limpa todo o cache e recarrega a página (use se os dados não atualizarem)"
-        >
-          <i className="bi bi-arrow-repeat" />
-          Hard Refresh
-        </button>
       </div>
     </header>
   );
