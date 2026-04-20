@@ -271,13 +271,14 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
   const hoje = new Date().toISOString().slice(0, 10);
   const startISO = `${startDate ?? START_DATE}T00:00:00Z`;
   const endISO = `${endDate ?? hoje}T23:59:59Z`;
-  const chaveCache = `v3-${startISO}|${endISO}`; // v3 para forçar nova busca com tags/tarefas corrigidas
+  const chaveCache = `v4-${startISO}|${endISO}`; // v4 para forçar nova busca
 
   // Retorna do cache se ainda válido para o mesmo período
   const cached = getCacheDados(chaveCache);
   if (cached) return cached;
 
   console.log('[API] Buscando dados novos da API do Clockify...');
+  console.log(`[API] Período: ${startDate ?? START_DATE} até ${endDate ?? hoje}`);
 
   // Calcula segunda-feira da semana atual para filtrar semanas futuras
   const segundaFeiraAtual = getSemana(endDate ? `${endDate}T23:59:59Z` : `${hoje}T23:59:59Z`);
