@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
   const fim = params.get("fim") ?? hoje();
 
   console.log(`[API] GET /api/dashboard - force: ${force}, período: ${inicio} a ${fim}`);
+  console.log(`[API] Timestamp da requisição: ${new Date().toISOString()}`);
 
   if (force) {
     console.log('[API] Force=true, invalidando cache...');
@@ -30,7 +31,16 @@ export async function GET(request: NextRequest) {
   try {
     const dados = await processarDashboard(inicio, fim, force);
     console.log(`[API] Retornando ${dados.colaboradores.length} colaboradores`);
-    return NextResponse.json(dados);
+    console.log(`[API] Timestamp dos dados: ${dados.atualizadoEm}`);
+    
+    // Headers para FORÇAR o navegador a não cachear
+    const headers = new Headers();
+    headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    headers.set('Pragma', 'no-cache');
+    headers.set('Expires', '0');
+    headers.set('Content-Type', 'application/json');
+    
+    return new NextResponse(JSON.stringify(dados), { headers });
   } catch (erro) {
     const mensagem = erro instanceof Error ? erro.message : "Erro desconhecido";
     console.error('[API] Erro ao processar dashboard:', mensagem);

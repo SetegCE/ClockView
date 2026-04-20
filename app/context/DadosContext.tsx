@@ -40,9 +40,18 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       const params = new URLSearchParams({ inicio: periodoInicio, fim: periodoFim });
       if (forcar) params.set("force", "true");
       
+      // Adiciona timestamp único para FORÇAR o navegador a não usar cache
+      params.set("_t", Date.now().toString());
+      
       console.log(`[CONTEXT] Buscando dados - force: ${forcar}, período: ${periodoInicio} a ${periodoFim}`);
       
-      const res = await fetch(`/api/dashboard?${params.toString()}`);
+      const res = await fetch(`/api/dashboard?${params.toString()}`, {
+        cache: 'no-store', // NUNCA usa cache do navegador
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
 
       if (res.status === 401) {
         window.location.href = "/login";
@@ -56,6 +65,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       const json: DadosDashboard = await res.json();
       setDados(json);
       console.log(`[CONTEXT] Dados atualizados com sucesso - ${json.colaboradores.length} colaboradores`);
+      console.log(`[CONTEXT] Timestamp dos dados: ${json.atualizadoEm}`);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro desconhecido");
       console.error('[CONTEXT] Erro ao atualizar:', e);
