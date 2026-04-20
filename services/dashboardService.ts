@@ -27,7 +27,7 @@ import type {
   Categoria,
 } from "@/lib/types";
 
-// ─── Cache DESABILITADO - sempre busca dados novos da API ──────────────────────
+// ─── Cache em memória com TTL de 10 segundos ──────────────────────────────────
 interface CacheEntry {
   dados: DadosDashboard;
   timestamp: number;
@@ -35,22 +35,29 @@ interface CacheEntry {
 }
 
 const globalCache = global as typeof global & { _clockviewCache?: CacheEntry };
-const CACHE_TTL_MS = 0; // CACHE DESABILITADO - sempre busca dados novos
+const CACHE_TTL_MS = 10 * 1000; // 10 segundos - atualização rápida
 
 export function getCacheDados(chave: string): DadosDashboard | null {
-  // CACHE DESABILITADO - sempre retorna null para forçar busca na API
-  console.log('[CACHE] Cache desabilitado - buscando dados novos da API');
-  return null;
+  const entry = globalCache._clockviewCache;
+  if (!entry) return null;
+  if (entry.chave !== chave) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    console.log('[CACHE] Cache expirado (10s), buscando dados novos');
+    return null;
+  }
+  const idade = Math.round((Date.now() - entry.timestamp) / 1000);
+  console.log(`[CACHE] Usando cache (${idade}s de ${CACHE_TTL_MS / 1000}s)`);
+  return entry.dados;
 }
 
 function setCacheDados(dados: DadosDashboard, chave: string) {
-  // CACHE DESABILITADO - não salva nada
-  console.log('[CACHE] Cache desabilitado - dados não serão salvos em cache');
+  globalCache._clockviewCache = { dados, timestamp: Date.now(), chave };
+  console.log('[CACHE] Dados salvos em cache (TTL: 10s)');
 }
 
 export function invalidarCache() {
-  // CACHE DESABILITADO - não há cache para invalidar
-  console.log('[CACHE] Cache desabilitado - nada para invalidar');
+  globalCache._clockviewCache = undefined;
+  console.log('[CACHE] Cache invalidado manualmente');
 }
 
 // ─── Estruturas internas de acumulação ────────────────────────────────────────
@@ -266,8 +273,13 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
   const hoje = new Date().toISOString().slice(0, 10);
   const startISO = `${startDate ?? START_DATE}T00:00:00Z`;
   const endISO = `${endDate ?? hoje}T23:59:59Z`;
+  const chaveCache = `v5-${startISO}|${endISO}`; // v5 com cache de 10s
 
-  console.log('[API] CACHE DESABILITADO - Buscando dados SEMPRE da API do Clockify');
+  // Retorna do cache se ainda válido (10s)
+  const cached = getCacheDados(chaveCache);
+  if (cached) return cached;
+
+  console.log('[API] Buscando dados da API do Clockify...');
   console.log(`[API] Período: ${startDate ?? START_DATE} até ${endDate ?? hoje}`);
 
   // Calcula segunda-feira da semana atual para filtrar semanas futuras
@@ -718,7 +730,7 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
     colaboradores,
   };
 
-  // CACHE DESABILITADO - retorna direto sem salvar
-  console.log('[API] Retornando dados FRESCOS da API (sem cache)');
+  // Salva no cache (10s)
+  setCacheDados(resultado, chaveCache);
   return resultado;
 }
