@@ -35,8 +35,12 @@ export function DadosProvider({ children }: { children: ReactNode }) {
 
   const atualizar = useCallback(async (forcar = false) => {
     try {
-      if (forcar) setAtualizando(true);
+      if (forcar) {
+        setAtualizando(true);
+        console.log('[CONTEXT] Forçando atualização - limpando estado anterior');
+      }
       setErro(null);
+      
       const params = new URLSearchParams({ inicio: periodoInicio, fim: periodoFim });
       if (forcar) params.set("force", "true");
       
@@ -44,34 +48,47 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       params.set("_t", Date.now().toString());
       
       console.log(`[CONTEXT] Buscando dados - force: ${forcar}, período: ${periodoInicio} a ${periodoFim}`);
+      console.log(`[CONTEXT] URL: /api/dashboard?${params.toString()}`);
       
       const res = await fetch(`/api/dashboard?${params.toString()}`, {
+        method: 'GET',
         cache: 'no-store', // NUNCA usa cache do navegador
         headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
         }
       });
 
+      console.log(`[CONTEXT] Resposta recebida - status: ${res.status}, ok: ${res.ok}`);
+
       if (res.status === 401) {
+        console.log('[CONTEXT] Não autorizado, redirecionando para login');
         window.location.href = "/login";
         return;
       }
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? `Erro HTTP ${res.status}`);
+        const errorMsg = body.error ?? `Erro HTTP ${res.status}`;
+        console.error('[CONTEXT] Erro na resposta:', errorMsg);
+        throw new Error(errorMsg);
       }
+      
       const json: DadosDashboard = await res.json();
-      setDados(json);
-      console.log(`[CONTEXT] Dados atualizados com sucesso - ${json.colaboradores.length} colaboradores`);
+      console.log(`[CONTEXT] Dados parseados com sucesso - ${json.colaboradores.length} colaboradores`);
       console.log(`[CONTEXT] Timestamp dos dados: ${json.atualizadoEm}`);
+      
+      setDados(json);
+      console.log('[CONTEXT] Estado atualizado com sucesso');
     } catch (e) {
-      setErro(e instanceof Error ? e.message : "Erro desconhecido");
-      console.error('[CONTEXT] Erro ao atualizar:', e);
+      const errorMsg = e instanceof Error ? e.message : "Erro desconhecido";
+      console.error('[CONTEXT] ERRO ao atualizar:', errorMsg, e);
+      setErro(errorMsg);
     } finally {
       setCarregando(false);
       setAtualizando(false);
+      console.log('[CONTEXT] Atualização finalizada');
     }
   }, [periodoInicio, periodoFim]);
 
