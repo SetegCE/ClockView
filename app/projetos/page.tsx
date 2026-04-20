@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useDados } from "@/app/context/DadosContext";
 import { Loading, Erro } from "@/app/components/LoadingErro";
 import { PCOLS } from "@/app/lib/constants";
-import { fmt, trunc, iniciais } from "@/app/lib/utils";
+import { fmt, fmtHoras, trunc, iniciais } from "@/app/lib/utils";
 
 interface ProjetoAgregado {
   nome: string;
@@ -63,7 +63,7 @@ export default function PageProjetos() {
           <div className="cv-card">
             <div>
               <div className="cv-card-label">Total de horas</div>
-              <div className="cv-card-value">{fmt(totalGeralHoras)}h</div>
+              <div className="cv-card-value">{fmtHoras(totalGeralHoras)}</div>
               <div className="cv-card-sub">em todos os projetos</div>
             </div>
             <div className="cv-card-icon" style={{ background: "#ff8200" }}>
@@ -77,7 +77,7 @@ export default function PageProjetos() {
                 {projetos.length > 0 ? trunc(projetos[0].nome, 20) : "—"}
               </div>
               <div className="cv-card-sub">
-                {projetos.length > 0 ? `${fmt(projetos[0].totalHoras)}h registradas` : ""}
+                {projetos.length > 0 ? `${fmtHoras(projetos[0].totalHoras)} registradas` : ""}
               </div>
             </div>
             <div className="cv-card-icon" style={{ background: "#ff8200" }}>
@@ -144,8 +144,7 @@ export default function PageProjetos() {
 
                 {/* Horas — alinhado à direita */}
                 <div style={{ textAlign: "right" }}>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: cor }}>{fmt(p.totalHoras)}</span>
-                  <span style={{ fontSize: 11, color: "#94a3b8", marginLeft: 2 }}>h</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: cor }}>{fmtHoras(p.totalHoras)}</span>
                 </div>
 
                 {/* Colaboradores — alinhado à direita */}
@@ -187,7 +186,7 @@ export default function PageProjetos() {
               <div style={{ display: "flex", gap: 20, marginTop: 14 }}>
                 <div>
                   <div style={{ fontSize: 11, color: "#94a3b8" }}>Total de horas</div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: "#6366f1" }}>{fmt(proj.totalHoras)}h</div>
+                  <div style={{ fontSize: 22, fontWeight: 700, color: "#6366f1" }}>{fmtHoras(proj.totalHoras)}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: 11, color: "#94a3b8" }}>Colaboradores</div>
@@ -254,7 +253,7 @@ export default function PageProjetos() {
                           </div>
                           <div style={{ textAlign: "right", display: "flex", alignItems: "center", gap: 8 }}>
                             <div>
-                              <div style={{ fontSize: 15, fontWeight: 700, color: PCOLS[idx % PCOLS.length] }}>{fmt(c.horas)}h</div>
+                              <div style={{ fontSize: 15, fontWeight: 700, color: PCOLS[idx % PCOLS.length] }}>{fmtHoras(c.horas)}</div>
                               <div style={{ fontSize: 11, color: "#94a3b8" }}>{pctColab}% do projeto</div>
                             </div>
                             <i 
@@ -323,7 +322,7 @@ export default function PageProjetos() {
                                   )}
                                 </div>
                                 <div style={{ fontSize: 13, fontWeight: 700, color: PCOLS[idx % PCOLS.length], flexShrink: 0 }}>
-                                  {fmt(ativ.horas)}h
+                                  {fmtHoras(ativ.horas)}
                                 </div>
                               </div>
                             </div>

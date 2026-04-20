@@ -10,6 +10,18 @@ function hoje(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function primeiroDiaDoMes(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function ultimoDiaDoMes(): string {
+  const d = new Date();
+  // Cria uma data para o primeiro dia do próximo mês, depois subtrai 1 dia
+  const ultimoDia = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  return `${ultimoDia.getFullYear()}-${String(ultimoDia.getMonth() + 1).padStart(2, "0")}-${String(ultimoDia.getDate()).padStart(2, "0")}`;
+}
+
 interface DadosContextType {
   dados: DadosDashboard | null;
   carregando: boolean;
@@ -29,8 +41,8 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [periodoInicio, setPeriodoInicio] = useState(START_DATE);
-  const [periodoFim, setPeriodoFim] = useState(hoje);
+  const [periodoInicio, setPeriodoInicio] = useState(primeiroDiaDoMes());
+  const [periodoFim, setPeriodoFim] = useState(ultimoDiaDoMes());
   const pathname = usePathname();
 
   const atualizar = useCallback(async (forcar = false) => {

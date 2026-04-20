@@ -275,8 +275,9 @@ export async function processarDashboard(startDate?: string, endDate?: string, f
   console.log(`[API] Datas UTC: ${startISO} até ${endISO}`);
   console.log(`[API] Force: ${force}`);
 
-  // Calcula segunda-feira da semana atual para filtrar semanas futuras
-  const segundaFeiraAtual = getSemana(endDate ? `${endDate}T23:59:59Z` : `${hoje}T23:59:59Z`);
+  // Calcula segunda-feira da semana atual (baseada em hoje) para filtrar semanas futuras
+  // Nota: Usa 'hoje' e não 'endDate' para garantir que a semana atual seja sempre incluída
+  const segundaFeiraAtual = getSemana(`${hoje}T23:59:59Z`);
 
   // Busca usuários, projetos e tags em paralelo
   const [usuarios, projetos, tags] = await Promise.all([

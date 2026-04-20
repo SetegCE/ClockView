@@ -7,7 +7,7 @@ import React from "react";
 import { useDados } from "@/app/context/DadosContext";
 import { Loading, Erro } from "@/app/components/LoadingErro";
 import { PCOLS } from "@/app/lib/constants";
-import { fmt, fmtData, fmtDataLonga, iniciais, numeroSemanaISO, intervaloSemanaISO, totalSemanasAno } from "@/app/lib/utils";
+import { fmt, fmtData, fmtDataLonga, fmtHoras, iniciais, numeroSemanaISO, intervaloSemanaISO, totalSemanasAno } from "@/app/lib/utils";
 
 const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const DIAS_SEMANA = ["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"];
@@ -238,12 +238,12 @@ export default function PageCalendario() {
               <div style={{ display: "flex", gap: 16, marginTop: 10 }}>
                 <div>
                   <div style={{ fontSize: 11, color: "#94a3b8" }}>Total de horas</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: "#6366f1" }}>{fmt(totalHorasSemana)}h</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: "#6366f1" }}>{fmtHoras(totalHorasSemana)}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: 11, color: "#94a3b8" }}>Média por pessoa</div>
                   <div style={{ fontSize: 20, fontWeight: 700, color: "#334155" }}>
-                    {colabsDia.length > 0 ? fmt(totalHorasSemana / colabsDia.length) : "0.0"}h
+                    {colabsDia.length > 0 ? fmtHoras(totalHorasSemana / colabsDia.length) : "00:00"}
                   </div>
                 </div>
               </div>
@@ -299,7 +299,7 @@ export default function PageCalendario() {
                             </div>
                             <div style={{ textAlign: "right", display: "flex", alignItems: "center", gap: 6 }}>
                               <div>
-                                <div style={{ fontSize: 14, fontWeight: 700, color: cor }}>{fmt(c.horas)}h</div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: cor }}>{fmtHoras(c.horas)}</div>
                                 <div style={{ fontSize: 10, fontWeight: 600, color: cor }}>{pct}%</div>
                               </div>
                               <i 
@@ -345,7 +345,7 @@ export default function PageCalendario() {
                                   alignItems: "center"
                                 }}>
                                   <span>{proj.nome}</span>
-                                  <span style={{ color: PCOLS[projIdx % PCOLS.length] }}>{fmt(proj.horas)}h</span>
+                                  <span style={{ color: PCOLS[projIdx % PCOLS.length] }}>{fmtHoras(proj.horas)}</span>
                                 </div>
                                 {proj.top3.length > 0 && (
                                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -366,7 +366,7 @@ export default function PageCalendario() {
                                             </div>
                                           </div>
                                           <div style={{ fontSize: 11, fontWeight: 700, color: PCOLS[projIdx % PCOLS.length], flexShrink: 0 }}>
-                                            {fmt(ativ.horas)}h
+                                            {fmtHoras(ativ.horas)}
                                           </div>
                                         </div>
                                         {ativ.tarefa && (
