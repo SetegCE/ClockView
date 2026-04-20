@@ -255,16 +255,24 @@ async function buscarEntradasUsuario(
 
 export async function processarDashboard(startDate?: string, endDate?: string, force: boolean = false): Promise<DadosDashboard> {
   const hoje = new Date().toISOString().slice(0, 10);
-  const startISO = `${startDate ?? START_DATE}T00:00:00Z`;
-  const endISO = `${endDate ?? hoje}T23:59:59Z`;
-  const chaveCache = `v6-${startISO}|${endISO}`; // v6 com force bypass
+  
+  // Converte datas locais para UTC para enviar à API do Clockify
+  // Exemplo: 2026-04-20T00:00:00 (UTC-3) → 2026-04-20T03:00:00Z (UTC)
+  // Isso garante que todo o dia seja incluído na busca (00:00:00 até 23:59:59 local)
+  const startLocal = new Date(`${startDate ?? START_DATE}T00:00:00`);
+  const endLocal = new Date(`${endDate ?? hoje}T23:59:59`);
+  const startISO = startLocal.toISOString();
+  const endISO = endLocal.toISOString();
+  
+  const chaveCache = `v7-${startDate ?? START_DATE}|${endDate ?? hoje}`; // v7 com correção de timezone
 
   // Retorna do cache se ainda válido (10s) E não for force
   const cached = getCacheDados(chaveCache, force);
   if (cached) return cached;
 
   console.log('[API] Buscando dados da API do Clockify...');
-  console.log(`[API] Período: ${startDate ?? START_DATE} até ${endDate ?? hoje}`);
+  console.log(`[API] Datas locais: ${startDate ?? START_DATE} até ${endDate ?? hoje}`);
+  console.log(`[API] Datas UTC: ${startISO} até ${endISO}`);
   console.log(`[API] Force: ${force}`);
 
   // Calcula segunda-feira da semana atual para filtrar semanas futuras
