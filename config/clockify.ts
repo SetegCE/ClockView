@@ -33,6 +33,7 @@ export const EXCLUDE_USERS = [
   "Gustavo Toledo",
   "Matheus Haddad",
   "Hugo Fernandes",
+  "Igor Gutierrez",
 ];
 
 /** Palavras-chave nas descrições que indicam ausência (excluídas do cálculo de horas) */
