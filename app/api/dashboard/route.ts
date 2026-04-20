@@ -23,12 +23,12 @@ export async function GET(request: NextRequest) {
   console.log(`[API] GET /api/dashboard - force: ${force}, período: ${inicio} a ${fim}`);
 
   if (force) {
-    console.log('[API] Invalidando cache...');
+    console.log('[API] Force=true, invalidando cache...');
     invalidarCache();
   }
 
   try {
-    const dados = await processarDashboard(inicio, fim);
+    const dados = await processarDashboard(inicio, fim, force);
     console.log(`[API] Retornando ${dados.colaboradores.length} colaboradores`);
     return NextResponse.json(dados);
   } catch (erro) {

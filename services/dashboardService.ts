@@ -26,7 +26,7 @@ import type {
   Categoria,
 } from "@/lib/types";
 
-// ─── Cache em memória com TTL de 10 segundos ──────────────────────────────────
+// ─── Cache em memória com TTL DESABILITADO para force=true ────────────────────
 interface CacheEntry {
   dados: DadosDashboard;
   timestamp: number;
@@ -36,7 +36,13 @@ interface CacheEntry {
 const globalCache = global as typeof global & { _clockviewCache?: CacheEntry };
 const CACHE_TTL_MS = 10 * 1000; // 10 segundos - atualização rápida
 
-export function getCacheDados(chave: string): DadosDashboard | null {
+export function getCacheDados(chave: string, force: boolean = false): DadosDashboard | null {
+  // Se force=true, NUNCA usa cache
+  if (force) {
+    console.log('[CACHE] Force=true, ignorando cache completamente');
+    return null;
+  }
+  
   const entry = globalCache._clockviewCache;
   if (!entry) return null;
   if (entry.chave !== chave) return null;
@@ -247,18 +253,19 @@ async function buscarEntradasUsuario(
 
 // ─── Processamento principal ──────────────────────────────────────────────────
 
-export async function processarDashboard(startDate?: string, endDate?: string): Promise<DadosDashboard> {
+export async function processarDashboard(startDate?: string, endDate?: string, force: boolean = false): Promise<DadosDashboard> {
   const hoje = new Date().toISOString().slice(0, 10);
   const startISO = `${startDate ?? START_DATE}T00:00:00Z`;
   const endISO = `${endDate ?? hoje}T23:59:59Z`;
-  const chaveCache = `v5-${startISO}|${endISO}`; // v5 com cache de 10s
+  const chaveCache = `v6-${startISO}|${endISO}`; // v6 com force bypass
 
-  // Retorna do cache se ainda válido (10s)
-  const cached = getCacheDados(chaveCache);
+  // Retorna do cache se ainda válido (10s) E não for force
+  const cached = getCacheDados(chaveCache, force);
   if (cached) return cached;
 
   console.log('[API] Buscando dados da API do Clockify...');
   console.log(`[API] Período: ${startDate ?? START_DATE} até ${endDate ?? hoje}`);
+  console.log(`[API] Force: ${force}`);
 
   // Calcula segunda-feira da semana atual para filtrar semanas futuras
   const segundaFeiraAtual = getSemana(endDate ? `${endDate}T23:59:59Z` : `${hoje}T23:59:59Z`);

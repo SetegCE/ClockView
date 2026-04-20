@@ -2,29 +2,12 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import { START_DATE } from "@/config/clockify";
 import type { DadosDashboard } from "@/lib/types";
 
-function primeiroDiaMes(): string {
+function hoje(): string {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-}
-
-function primeiroDiaMesAnterior(): string {
-  const d = new Date();
-  // Volta 1 mês
-  d.setMonth(d.getMonth() - 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-}
-
-function primeiroDiaAno(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-01-01`;
-}
-
-function ultimoDiaMes(): string {
-  const d = new Date();
-  const ultimo = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-  return `${ultimo.getFullYear()}-${String(ultimo.getMonth() + 1).padStart(2, "0")}-${String(ultimo.getDate()).padStart(2, "0")}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 interface DadosContextType {
@@ -46,8 +29,8 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [periodoInicio, setPeriodoInicio] = useState(primeiroDiaMesAnterior);
-  const [periodoFim, setPeriodoFim] = useState(ultimoDiaMes);
+  const [periodoInicio, setPeriodoInicio] = useState(START_DATE);
+  const [periodoFim, setPeriodoFim] = useState(hoje);
   const pathname = usePathname();
 
   const atualizar = useCallback(async (forcar = false) => {
@@ -56,6 +39,9 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       setErro(null);
       const params = new URLSearchParams({ inicio: periodoInicio, fim: periodoFim });
       if (forcar) params.set("force", "true");
+      
+      console.log(`[CONTEXT] Buscando dados - force: ${forcar}, período: ${periodoInicio} a ${periodoFim}`);
+      
       const res = await fetch(`/api/dashboard?${params.toString()}`);
 
       if (res.status === 401) {
@@ -69,8 +55,10 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       }
       const json: DadosDashboard = await res.json();
       setDados(json);
+      console.log(`[CONTEXT] Dados atualizados com sucesso - ${json.colaboradores.length} colaboradores`);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro desconhecido");
+      console.error('[CONTEXT] Erro ao atualizar:', e);
     } finally {
       setCarregando(false);
       setAtualizando(false);
