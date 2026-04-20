@@ -35,13 +35,18 @@ interface CacheEntry {
 }
 
 const globalCache = global as typeof global & { _clockviewCache?: CacheEntry };
-const CACHE_TTL_MS = 1 * 60 * 1000; // 1 minuto para debug
+const CACHE_TTL_MS = 30 * 1000; // 30 segundos - atualização mais frequente
 
 export function getCacheDados(chave: string): DadosDashboard | null {
   const entry = globalCache._clockviewCache;
   if (!entry) return null;
   if (entry.chave !== chave) return null;
-  if (Date.now() - entry.timestamp > CACHE_TTL_MS) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    console.log('[CACHE] Cache expirado, buscando dados novos da API');
+    return null;
+  }
+  const idadeCache = Math.round((Date.now() - entry.timestamp) / 1000);
+  console.log(`[CACHE] Usando cache (idade: ${idadeCache}s / TTL: ${CACHE_TTL_MS / 1000}s)`);
   return entry.dados;
 }
 
@@ -272,6 +277,8 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
   const cached = getCacheDados(chaveCache);
   if (cached) return cached;
 
+  console.log('[API] Buscando dados novos da API do Clockify...');
+
   // Calcula segunda-feira da semana atual para filtrar semanas futuras
   const segundaFeiraAtual = getSemana(endDate ? `${endDate}T23:59:59Z` : `${hoje}T23:59:59Z`);
 
@@ -336,6 +343,7 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
   const usuariosArray = Array.from(mapaUsuarios.entries());
   const tasks = usuariosArray.map(([uid, uname]) => async () => {
     const entradas = await buscarEntradasUsuario(uid, startISO, endISO);
+    console.log(`[DEBUG] ${uname}: ${entradas.length} entradas encontradas no período`);
     const semanas = new Map<string, BucketSemana>();
 
     for (const e of entradas) {

@@ -26,13 +26,20 @@ export async function GET(request: NextRequest) {
   const inicio = params.get("inicio") ?? primeiroDiaMes();
   const fim = params.get("fim") ?? ultimoDiaMes();
 
-  if (force) invalidarCache();
+  console.log(`[API] GET /api/dashboard - force: ${force}, período: ${inicio} a ${fim}`);
+
+  if (force) {
+    console.log('[API] Invalidando cache...');
+    invalidarCache();
+  }
 
   try {
     const dados = await processarDashboard(inicio, fim);
+    console.log(`[API] Retornando ${dados.colaboradores.length} colaboradores`);
     return NextResponse.json(dados);
   } catch (erro) {
     const mensagem = erro instanceof Error ? erro.message : "Erro desconhecido";
+    console.error('[API] Erro ao processar dashboard:', mensagem);
     return NextResponse.json({ error: mensagem }, { status: 500 });
   }
 }
