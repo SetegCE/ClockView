@@ -335,6 +335,25 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
   const tasks = usuariosArray.map(([uid, uname]) => async () => {
     const entradas = await buscarEntradasUsuario(uid, startISO, endISO);
     console.log(`[DEBUG] ${uname}: ${entradas.length} entradas encontradas no período`);
+    
+    // Log detalhado para Henrique
+    if (uname.toLowerCase().includes("henrique")) {
+      console.log(`[DEBUG HENRIQUE] Processando ${entradas.length} entradas...`);
+      const hoje = new Date().toISOString().slice(0, 10);
+      const entradaHoje = entradas.filter(e => e.timeInterval?.start?.startsWith(hoje));
+      console.log(`[DEBUG HENRIQUE] Entradas de HOJE (${hoje}): ${entradaHoje.length}`);
+      if (entradaHoje.length > 0) {
+        for (const e of entradaHoje) {
+          console.log(`[DEBUG HENRIQUE] Entrada:`, {
+            start: e.timeInterval?.start,
+            duration: e.timeInterval?.duration,
+            desc: e.description?.substring(0, 50),
+            projectId: e.projectId
+          });
+        }
+      }
+    }
+    
     const semanas = new Map<string, BucketSemana>();
 
     for (const e of entradas) {
@@ -345,6 +364,19 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
       const horas = parseDuration(interval.duration ?? "");
       const desc = (e.description ?? "").trim();
       const cliente = e.projectId ? (mapaProjetos.get(e.projectId) ?? "Sem Código Registrado") : "Sem Código Registrado";
+
+      // Log detalhado para Henrique
+      if (uname.toLowerCase().includes("henrique") && interval.start.startsWith("2026-04-20")) {
+        console.log(`[DEBUG HENRIQUE] Processando entrada de 20/04:`, {
+          semana,
+          horas,
+          desc: desc.substring(0, 50),
+          cliente,
+          isCarnaval: isCarnaval(desc),
+          isFolga: isFolga(desc),
+          isExcluida: isExcluida(desc)
+        });
+      }
 
       // Processa tags
       const tagNames: string[] = [];
