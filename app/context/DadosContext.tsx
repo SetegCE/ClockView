@@ -100,6 +100,15 @@ export function DadosProvider({ children }: { children: ReactNode }) {
     atualizar(false);
   }, [atualizar, pathname]);
 
+  // Atualiza automaticamente quando o período muda
+  useEffect(() => {
+    if (pathname === "/login") return;
+    if (carregando) return; // Não atualiza durante o carregamento inicial
+    
+    console.log('[CONTEXT] Período alterado, atualizando dados...');
+    atualizar(true); // Força atualização para ignorar cache
+  }, [periodoInicio, periodoFim, pathname, carregando, atualizar]);
+
   // Atualização automática a cada hora
   useEffect(() => {
     if (pathname === "/login") return;
