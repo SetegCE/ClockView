@@ -377,13 +377,16 @@ export async function processarDashboard(startDate?: string, endDate?: string): 
       const desc = (e.description ?? "").trim();
       const cliente = e.projectId ? (mapaProjetos.get(e.projectId) ?? "Sem Código Registrado") : "Sem Código Registrado";
 
-      // Log detalhado para Henrique
-      if (uname.toLowerCase().includes("henrique") && interval.start.startsWith("2026-04-20")) {
-        console.log(`[DEBUG HENRIQUE] Processando entrada de 20/04:`, {
-          semana,
+      // Log detalhado para Henrique e Laís
+      const isHenrique = uname.toLowerCase().includes("henrique");
+      const isLais = uname.toLowerCase().includes("laís") || uname.toLowerCase().includes("lais");
+      
+      if ((isHenrique || isLais) && interval.start.startsWith("2026-04")) {
+        console.log(`[DEBUG ${uname.toUpperCase()}] Entrada de abril:`, {
+          data: interval.start.slice(0, 10),
+          semanaCalculada: semana,
           horas,
           desc: desc.substring(0, 50),
-          cliente,
           isCarnaval: isCarnaval(desc),
           isFolga: isFolga(desc),
           isExcluida: isExcluida(desc)
