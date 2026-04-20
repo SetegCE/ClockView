@@ -9,6 +9,13 @@ function primeiroDiaMes(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
+function primeiroDiaMesAnterior(): string {
+  const d = new Date();
+  // Volta 1 mês
+  d.setMonth(d.getMonth() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
 function primeiroDiaAno(): string {
   const d = new Date();
   return `${d.getFullYear()}-01-01`;
@@ -39,7 +46,7 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const [carregando, setCarregando] = useState(true);
   const [atualizando, setAtualizando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [periodoInicio, setPeriodoInicio] = useState(primeiroDiaAno);
+  const [periodoInicio, setPeriodoInicio] = useState(primeiroDiaMesAnterior);
   const [periodoFim, setPeriodoFim] = useState(ultimoDiaMes);
   const pathname = usePathname();
 
