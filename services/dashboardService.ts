@@ -140,6 +140,8 @@ function normalizarNome(nome: string): string {
 
 async function buscarUsuarios(): Promise<ClockifyUser[]> {
   // Busca TODOS os usuários ACTIVE com paginação
+  // Filtra também pelo campo status na resposta para garantir que usuários
+  // recém-desativados não apareçam mesmo que a API ainda os retorne
   const todosUsuarios: ClockifyUser[] = [];
   let page = 1;
   
@@ -150,7 +152,9 @@ async function buscarUsuarios(): Promise<ClockifyUser[]> {
     );
     if ("status" in r) throw new Error(r.message);
     if (r.data.length === 0) break;
-    todosUsuarios.push(...r.data);
+    // Filtra explicitamente pelo campo status para garantir consistência
+    const apenasAtivos = r.data.filter((u) => u.status === "ACTIVE");
+    todosUsuarios.push(...apenasAtivos);
     if (r.data.length < 200) break;
     page++;
   }

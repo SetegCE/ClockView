@@ -20,7 +20,7 @@ export interface ClockifyUser {
   id: string;
   name: string;
   email: string;
-  status: string;
+  status: "ACTIVE" | "INACTIVE" | "PENDING" | string;
 }
 
 export interface ClockifyProject {
