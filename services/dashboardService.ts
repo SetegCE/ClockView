@@ -26,7 +26,10 @@ import type {
   Categoria,
 } from "@/lib/types";
 
-// ─── Cache em memória com TTL DESABILITADO para force=true ────────────────────
+// ─── Cache em memória com TTL de 5 minutos ────────────────────────────────────
+// force=true sempre ignora o cache e busca dados frescos da API
+// Isso garante que colaboradores desativados/ativados apareçam imediatamente
+// ao clicar no botão Atualizar
 interface CacheEntry {
   dados: DadosDashboard;
   timestamp: number;
@@ -34,35 +37,35 @@ interface CacheEntry {
 }
 
 const globalCache = global as typeof global & { _clockviewCache?: CacheEntry };
-const CACHE_TTL_MS = 10 * 1000; // 10 segundos - atualização rápida
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
 
 export function getCacheDados(chave: string, force: boolean = false): DadosDashboard | null {
-  // Se force=true, NUNCA usa cache
+  // force=true: ignora cache completamente — busca sempre da API
   if (force) {
-    console.log('[CACHE] Force=true, ignorando cache completamente');
+    console.log('[CACHE] Force=true, buscando dados frescos da API');
     return null;
   }
-  
+
   const entry = globalCache._clockviewCache;
   if (!entry) return null;
   if (entry.chave !== chave) return null;
   if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
-    console.log('[CACHE] Cache expirado (10s), buscando dados novos');
+    console.log('[CACHE] Cache expirado (5min), buscando dados novos');
     return null;
   }
-  const idade = Math.round((Date.now() - entry.timestamp) / 1000);
-  console.log(`[CACHE] Usando cache (${idade}s de ${CACHE_TTL_MS / 1000}s)`);
+  const idadeSeg = Math.round((Date.now() - entry.timestamp) / 1000);
+  console.log(`[CACHE] Usando cache (${idadeSeg}s de ${CACHE_TTL_MS / 1000}s)`);
   return entry.dados;
 }
 
 function setCacheDados(dados: DadosDashboard, chave: string) {
   globalCache._clockviewCache = { dados, timestamp: Date.now(), chave };
-  console.log('[CACHE] Dados salvos em cache (TTL: 10s)');
+  console.log('[CACHE] Dados salvos em cache (TTL: 5min)');
 }
 
 export function invalidarCache() {
   globalCache._clockviewCache = undefined;
-  console.log('[CACHE] Cache invalidado manualmente');
+  console.log('[CACHE] Cache invalidado');
 }
 
 // ─── Estruturas internas de acumulação ────────────────────────────────────────
