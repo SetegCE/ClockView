@@ -38,27 +38,21 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const [periodoFim, setPeriodoFim] = useState(ultimoDiaDoMes());
   const pathname = usePathname();
 
-  // Ref para acessar período atual sem recriar atualizar a cada mudança
-  const periodoRef = useRef({ inicio: periodoInicio, fim: periodoFim });
-  periodoRef.current = { inicio: periodoInicio, fim: periodoFim };
-
-  // Ref para evitar requisição duplicada em andamento
+  // Ref para evitar requisições simultâneas
   const requisicaoEmAndamento = useRef(false);
 
-  const atualizar = useCallback(async (forcar = false) => {
-    // Evita requisições simultâneas
+  // Função interna que recebe o período explicitamente — sem depender de refs ou closures
+  const buscarDados = useCallback(async (inicio: string, fim: string, forcar: boolean) => {
     if (requisicaoEmAndamento.current) {
       console.log('[CONTEXT] Requisição já em andamento, ignorando');
       return;
     }
-
     requisicaoEmAndamento.current = true;
 
     try {
       if (forcar) setAtualizando(true);
       setErro(null);
 
-      const { inicio, fim } = periodoRef.current;
       const params = new URLSearchParams({ inicio, fim });
       if (forcar) params.set("force", "true");
 
@@ -88,9 +82,14 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       setAtualizando(false);
       requisicaoEmAndamento.current = false;
     }
-  }, []); // sem dependências — usa periodoRef para acessar período atual
+  }, []);
 
-  // Carrega dados UMA única vez ao montar (não ao trocar de página)
+  // atualizar exposto no contexto — usa o período atual do estado
+  const atualizar = useCallback(async (forcar = false) => {
+    await buscarDados(periodoInicio, periodoFim, forcar);
+  }, [buscarDados, periodoInicio, periodoFim]);
+
+  // Carrega dados UMA única vez ao montar
   const carregouInicial = useRef(false);
   useEffect(() => {
     if (pathname === "/login") {
@@ -99,19 +98,19 @@ export function DadosProvider({ children }: { children: ReactNode }) {
     }
     if (carregouInicial.current) return;
     carregouInicial.current = true;
-    atualizar(false);
-  }, [pathname, atualizar]);
+    buscarDados(periodoInicio, periodoFim, false);
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Atualiza APENAS quando o período muda explicitamente pelo usuário
+  // Atualiza quando o período muda — ignora o mount inicial
   const periodoInicializado = useRef(false);
   useEffect(() => {
     if (!periodoInicializado.current) {
       periodoInicializado.current = true;
-      return; // ignora o mount inicial
+      return;
     }
     if (pathname === "/login") return;
-    console.log('[CONTEXT] Período alterado, atualizando...');
-    atualizar(true);
+    console.log(`[CONTEXT] Período alterado: ${periodoInicio} a ${periodoFim}`);
+    buscarDados(periodoInicio, periodoFim, true);
   }, [periodoInicio, periodoFim]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Atualização automática a cada 1 hora
