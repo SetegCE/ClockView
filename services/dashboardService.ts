@@ -276,20 +276,14 @@ export async function processarDashboard(startDate?: string, endDate?: string, f
 
   console.log(`[API] Usuários ACTIVE (${usuarios.length}):`, usuarios.map(u => limparNome(u.name)).sort().join(', '));
 
-  // Mapas de lookup - filtra apenas por EXCLUDE_USERS (blacklist)
   const mapaUsuarios = new Map(
     usuarios
       .filter((u) => {
         const nomeLimpo = limparNome(u.name);
         const nomeNormalizado = normalizarNome(nomeLimpo);
-
-        // Exclui apenas usuários da lista EXCLUDE_USERS
         return !EXCLUDE_USERS.some((ex) => {
           const exNormalizado = normalizarNome(ex);
-          // Correspondência exata
           if (nomeNormalizado === exNormalizado) return true;
-
-          // Correspondência parcial (todas as palavras do excluído estão no nome)
           const palavrasEx = exNormalizado.split(/\s+/);
           const palavrasNome = nomeNormalizado.split(/\s+/);
           return palavrasEx.every((p) => palavrasNome.includes(p));
@@ -298,14 +292,10 @@ export async function processarDashboard(startDate?: string, endDate?: string, f
       .map((u) => [u.id, limparNome(u.name)]),
   );
 
-  console.log('[DEBUG] Total de usuários buscados da API:', usuarios.length);
-  console.log('[DEBUG] Usuários após filtro EXCLUDE_USERS:', mapaUsuarios.size);
-  console.log('[DEBUG] Usuários incluídos:', Array.from(mapaUsuarios.values()).sort().join(', '));
+  console.log(`[API] Processando ${mapaUsuarios.size} colaboradores`);
 
   const mapaProjetos = new Map(
     projetos.map((p) => {
-      // Se tem clientName, formata como "Código - Cliente"
-      // Senão, usa apenas o nome do projeto
       const nomeFormatado = p.clientName 
         ? `${p.name} - ${p.clientName}`
         : p.name;
@@ -313,17 +303,22 @@ export async function processarDashboard(startDate?: string, endDate?: string, f
     }),
   );
 
-  const mapaTags = new Map(
-    tags.map((t) => [t.id, t.name]),
-  );
+  const mapaTags = new Map(tags.map((t) => [t.id, t.name]));
 
-  // Cache de tarefas por projeto (busca sob demanda)
+  // Pré-busca tarefas de todos os projetos em paralelo (máx 5 simultâneos)
+  // Evita chamadas HTTP dentro do loop de entradas que causam Too Many Requests
   const cacheTarefas = new Map<string, Map<string, string>>();
-  
-  async function obterNomeTarefa(projectId: string, taskId: string): Promise<string | null> {
-    if (!cacheTarefas.has(projectId)) {
-      cacheTarefas.set(projectId, await buscarTarefasProjeto(projectId));
-    }
+  const projetosComTarefas = projetos.filter(p => p.id);
+  await parallelLimit(
+    projetosComTarefas.map(p => async () => {
+      const tarefas = await buscarTarefasProjeto(p.id);
+      if (tarefas.size > 0) cacheTarefas.set(p.id, tarefas);
+    }),
+    5
+  );
+  console.log(`[API] Tarefas pré-carregadas de ${cacheTarefas.size} projetos`);
+
+  function obterNomeTarefa(projectId: string, taskId: string): string | null {
     return cacheTarefas.get(projectId)?.get(taskId) ?? null;
   }
 
@@ -334,46 +329,7 @@ export async function processarDashboard(startDate?: string, endDate?: string, f
   const usuariosArray = Array.from(mapaUsuarios.entries());
   const tasks = usuariosArray.map(([uid, uname]) => async () => {
     const entradas = await buscarEntradasUsuario(uid, startISO, endISO);
-    console.log(`[DEBUG] ${uname}: ${entradas.length} entradas encontradas no período`);
-    
-    // Log detalhado para TI
-    if (uname.toLowerCase().includes("ti")) {
-      console.log(`[DEBUG TI] Processando ${entradas.length} entradas...`);
-      const hoje = new Date().toISOString().slice(0, 10);
-      const entradaHoje = entradas.filter(e => e.timeInterval?.start?.startsWith(hoje));
-      console.log(`[DEBUG TI] Entradas de HOJE (${hoje}): ${entradaHoje.length}`);
-      if (entradaHoje.length > 0) {
-        for (const e of entradaHoje) {
-          console.log(`[DEBUG TI] Entrada:`, {
-            start: e.timeInterval?.start,
-            duration: e.timeInterval?.duration,
-            desc: e.description?.substring(0, 50),
-            projectId: e.projectId
-          });
-        }
-      }
-      // Log de TODAS as entradas de abril
-      const entradasAbril = entradas.filter(e => e.timeInterval?.start?.startsWith("2026-04"));
-      console.log(`[DEBUG TI] Total de entradas em ABRIL: ${entradasAbril.length}`);
-    }
-    
-    // Log detalhado para Henrique
-    if (uname.toLowerCase().includes("henrique")) {
-      console.log(`[DEBUG HENRIQUE] Processando ${entradas.length} entradas...`);
-      const hoje = new Date().toISOString().slice(0, 10);
-      const entradaHoje = entradas.filter(e => e.timeInterval?.start?.startsWith(hoje));
-      console.log(`[DEBUG HENRIQUE] Entradas de HOJE (${hoje}): ${entradaHoje.length}`);
-      if (entradaHoje.length > 0) {
-        for (const e of entradaHoje) {
-          console.log(`[DEBUG HENRIQUE] Entrada:`, {
-            start: e.timeInterval?.start,
-            duration: e.timeInterval?.duration,
-            desc: e.description?.substring(0, 50),
-            projectId: e.projectId
-          });
-        }
-      }
-    }
+    console.log(`[API] ${uname}: ${entradas.length} entradas`);
     
     const semanas = new Map<string, BucketSemana>();
 
@@ -386,24 +342,6 @@ export async function processarDashboard(startDate?: string, endDate?: string, f
       const desc = (e.description ?? "").trim();
       const cliente = e.projectId ? (mapaProjetos.get(e.projectId) ?? "Sem Código Registrado") : "Sem Código Registrado";
 
-      // Log detalhado para TI, Henrique e Laís
-      const isTI = uname.toLowerCase().includes("ti") && !uname.toLowerCase().includes("cristina");
-      const isHenrique = uname.toLowerCase().includes("henrique");
-      const isLais = uname.toLowerCase().includes("laís") || uname.toLowerCase().includes("lais");
-      
-      if ((isTI || isHenrique || isLais) && interval.start.startsWith("2026-04")) {
-        console.log(`[DEBUG ${uname.toUpperCase()}] Entrada de abril:`, {
-          data: interval.start.slice(0, 10),
-          semanaCalculada: semana,
-          horas,
-          desc: desc.substring(0, 50),
-          isCarnaval: isCarnaval(desc),
-          isFolga: isFolga(desc),
-          isExcluida: isExcluida(desc),
-          cliente
-        });
-      }
-
       // Processa tags
       const tagNames: string[] = [];
       if (e.tagIds && e.tagIds.length > 0) {
@@ -411,16 +349,12 @@ export async function processarDashboard(startDate?: string, endDate?: string, f
           const tagName = mapaTags.get(tagId);
           if (tagName) tagNames.push(tagName);
         }
-        if (tagNames.length > 0) {
-          console.log('[DEBUG] Entrada com tags:', { desc, tagNames });
-        }
       }
 
-      // Processa tarefa (busca sob demanda)
-      let tarefaNome: string | null = null;
-      if (e.taskId && e.projectId) {
-        tarefaNome = await obterNomeTarefa(e.projectId, e.taskId);
-      }
+      // Obtém nome da tarefa (síncrono — tarefas já pré-carregadas)
+      const tarefaNome = (e.taskId && e.projectId)
+        ? obterNomeTarefa(e.projectId, e.taskId)
+        : null;
 
       if (!semanas.has(semana)) semanas.set(semana, novoBucket());
       const bucket = semanas.get(semana)!;
@@ -723,19 +657,7 @@ export async function processarDashboard(startDate?: string, endDate?: string, f
   // Ordena por % média decrescente
   colaboradores.sort((a, b) => b.mediaPct - a.mediaPct);
 
-  console.log('[DEBUG] Total de colaboradores no resultado final:', colaboradores.length);
-  console.log('[DEBUG] Colaboradores incluídos:', colaboradores.map(c => c.nome).join(', '));
-
-  // DEBUG: Log para verificar se tags estão nos dados
-  const primeiroColab = colaboradores[0];
-  if (primeiroColab && primeiroColab.topProjetos.length > 0) {
-    const primeiroProjeto = primeiroColab.topProjetos[0];
-    console.log('[DEBUG] Primeiro colaborador:', primeiroColab.nome);
-    console.log('[DEBUG] Primeiro projeto:', primeiroProjeto.nome);
-    console.log('[DEBUG] Primeira atividade:', JSON.stringify(primeiroProjeto.top3[0]));
-    console.log('[DEBUG] Tem tags?', primeiroProjeto.top3[0].tags ? 'SIM' : 'NÃO');
-    console.log('[DEBUG] Tem tarefa?', primeiroProjeto.top3[0].tarefa ? 'SIM' : 'NÃO');
-  }
+  console.log(`[API] Processamento concluído: ${colaboradores.length} colaboradores`);
 
   const resultado: DadosDashboard = {
     atualizadoEm: new Date().toISOString(),
@@ -744,7 +666,6 @@ export async function processarDashboard(startDate?: string, endDate?: string, f
     colaboradores,
   };
 
-  // Salva no cache (10s)
   setCacheDados(resultado, chaveCache);
   return resultado;
 }
