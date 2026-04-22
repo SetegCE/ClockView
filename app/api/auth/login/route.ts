@@ -15,6 +15,8 @@ export async function POST(request: NextRequest) {
     process.env.ACCESS_CODE_1,
     process.env.ACCESS_CODE_2,
     process.env.ACCESS_CODE_3,
+    process.env.ACCESS_CODE_4,
+    process.env.ACCESS_CODE_5,
   ].filter(Boolean);
 
   if (!codigosValidos.includes(codigo)) {
