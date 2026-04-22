@@ -294,8 +294,7 @@ async function _executarProcessamento(
   endISO: string,
   chaveCache: string,
 ): Promise<DadosDashboard> {
-  console.log(`[API] Force: ${force}`);
-  console.log(`[API] Force: ${force}`);
+  console.log(`[API] Processando: ${startDate ?? START_DATE} até ${endDate ?? hoje}`);
 
   // Calcula segunda-feira da semana atual (baseada em hoje) para filtrar semanas futuras
   // Nota: Usa 'hoje' e não 'endDate' para garantir que a semana atual seja sempre incluída
