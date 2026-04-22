@@ -264,8 +264,11 @@ export async function processarDashboard(startDate?: string, endDate?: string, f
 
   console.log(`[API] Buscando dados: ${startDate ?? START_DATE} até ${endDate ?? hoje}, force=${force}`);
 
-  // Calcula segunda-feira da semana atual (baseada em hoje) para filtrar semanas futuras
-  const segundaFeiraAtual = getSemana(`${hoje}T23:59:59Z`);
+  // Calcula a semana limite para exibição
+  // Se endDate é no futuro: mostra até a semana do endDate (usuário quer ver período futuro)
+  // Se endDate é hoje ou passado: mostra até a semana atual
+  const dataFim = endDate ?? hoje;
+  const segundaFeiraAtual = getSemana(`${dataFim}T23:59:59Z`);
 
   // Busca usuários, projetos e tags em paralelo
   const [usuarios, projetos, tags] = await Promise.all([
