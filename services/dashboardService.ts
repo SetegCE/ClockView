@@ -26,22 +26,34 @@ import type {
   Categoria,
 } from "@/lib/types";
 
-// ─── Sem cache em memória ─────────────────────────────────────────────────────
-// Em ambiente serverless (Vercel), o cache global não é confiável pois cada
-// instância tem sua própria memória. Removido para garantir que desativações
-// e ativações no Clockify reflitam imediatamente ao clicar em Atualizar.
-
-export function getCacheDados(_chave: string, _force: boolean = false): DadosDashboard | null {
-  return null;
+// ─── Cache em memória com TTL de 2 minutos ────────────────────────────────────
+// Evita processamentos simultâneos no servidor quando múltiplos cliques chegam
+// force=true sempre ignora o cache e busca dados frescos
+interface CacheEntry {
+  dados: DadosDashboard;
+  timestamp: number;
+  chave: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function setCacheDados(_dados: DadosDashboard, _chave: string) {
-  // sem cache
+const globalCache = global as typeof global & { _clockviewCache?: CacheEntry };
+const CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutos
+
+export function getCacheDados(chave: string, force: boolean = false): DadosDashboard | null {
+  if (force) return null; // force sempre busca da API
+  const entry = globalCache._clockviewCache;
+  if (!entry) return null;
+  if (entry.chave !== chave) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) return null;
+  console.log(`[CACHE] Usando cache (${Math.round((Date.now() - entry.timestamp) / 1000)}s)`);
+  return entry.dados;
+}
+
+function setCacheDados(dados: DadosDashboard, chave: string) {
+  globalCache._clockviewCache = { dados, timestamp: Date.now(), chave };
 }
 
 export function invalidarCache() {
-  // sem cache
+  globalCache._clockviewCache = undefined;
 }
 
 // ─── Estruturas internas de acumulação ────────────────────────────────────────
@@ -234,28 +246,55 @@ async function buscarEntradasUsuario(
   return todas;
 }
 
+// ─── Lock de processamento — evita processamentos simultâneos ─────────────────
+const globalLock = global as typeof global & { _clockviewProcessando?: Promise<DadosDashboard> };
+
 // ─── Processamento principal ──────────────────────────────────────────────────
 
 export async function processarDashboard(startDate?: string, endDate?: string, force: boolean = false): Promise<DadosDashboard> {
   const hoje = new Date().toISOString().slice(0, 10);
   
-  // Converte datas locais para UTC para enviar à API do Clockify
-  // Exemplo: 2026-04-20T00:00:00 (UTC-3) → 2026-04-20T03:00:00Z (UTC)
-  // Isso garante que todo o dia seja incluído na busca (00:00:00 até 23:59:59 local)
   const startLocal = new Date(`${startDate ?? START_DATE}T00:00:00`);
   const endLocal = new Date(`${endDate ?? hoje}T23:59:59`);
   const startISO = startLocal.toISOString();
   const endISO = endLocal.toISOString();
   
-  const chaveCache = `v8-${startDate ?? START_DATE}|${endDate ?? hoje}`; // v8 - sem cache em memoria
+  const chaveCache = `v9-${startDate ?? START_DATE}|${endDate ?? hoje}`;
 
-  // Retorna do cache se ainda válido (10s) E não for force
+  // Retorna do cache se válido e não for force
   const cached = getCacheDados(chaveCache, force);
   if (cached) return cached;
 
-  console.log('[API] Buscando dados da API do Clockify...');
-  console.log(`[API] Datas locais: ${startDate ?? START_DATE} até ${endDate ?? hoje}`);
-  console.log(`[API] Datas UTC: ${startISO} até ${endISO}`);
+  // Se já tem um processamento em andamento para o mesmo período, aguarda ele
+  if (!force && globalLock._clockviewProcessando) {
+    console.log('[API] Aguardando processamento em andamento...');
+    return globalLock._clockviewProcessando;
+  }
+
+  console.log('[API] Iniciando processamento...');
+  console.log(`[API] Período: ${startDate ?? START_DATE} até ${endDate ?? hoje}`);
+
+  // Cria a promise do processamento e registra no lock global
+  const promiseProcessamento = _executarProcessamento(startDate, endDate, hoje, startISO, endISO, chaveCache);
+  globalLock._clockviewProcessando = promiseProcessamento;
+
+  try {
+    const resultado = await promiseProcessamento;
+    return resultado;
+  } finally {
+    globalLock._clockviewProcessando = undefined;
+  }
+}
+
+async function _executarProcessamento(
+  startDate: string | undefined,
+  endDate: string | undefined,
+  hoje: string,
+  startISO: string,
+  endISO: string,
+  chaveCache: string,
+): Promise<DadosDashboard> {
+  console.log(`[API] Force: ${force}`);
   console.log(`[API] Force: ${force}`);
 
   // Calcula segunda-feira da semana atual (baseada em hoje) para filtrar semanas futuras
