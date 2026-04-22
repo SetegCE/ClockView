@@ -1,14 +1,8 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { START_DATE } from "@/config/clockify";
 import type { DadosDashboard } from "@/lib/types";
-
-function hoje(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 
 function primeiroDiaDoMes(): string {
   const d = new Date();
@@ -17,7 +11,6 @@ function primeiroDiaDoMes(): string {
 
 function ultimoDiaDoMes(): string {
   const d = new Date();
-  // Cria uma data para o primeiro dia do próximo mês, depois subtrai 1 dia
   const ultimoDia = new Date(d.getFullYear(), d.getMonth() + 1, 0);
   return `${ultimoDia.getFullYear()}-${String(ultimoDia.getMonth() + 1).padStart(2, "0")}-${String(ultimoDia.getDate()).padStart(2, "0")}`;
 }
@@ -45,93 +38,89 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const [periodoFim, setPeriodoFim] = useState(ultimoDiaDoMes());
   const pathname = usePathname();
 
+  // Ref para acessar período atual sem recriar atualizar a cada mudança
+  const periodoRef = useRef({ inicio: periodoInicio, fim: periodoFim });
+  periodoRef.current = { inicio: periodoInicio, fim: periodoFim };
+
+  // Ref para evitar requisição duplicada em andamento
+  const requisicaoEmAndamento = useRef(false);
+
   const atualizar = useCallback(async (forcar = false) => {
+    // Evita requisições simultâneas
+    if (requisicaoEmAndamento.current) {
+      console.log('[CONTEXT] Requisição já em andamento, ignorando');
+      return;
+    }
+
+    requisicaoEmAndamento.current = true;
+
     try {
-      if (forcar) {
-        setAtualizando(true);
-        console.log('[CONTEXT] Forçando atualização - limpando estado anterior');
-      }
+      if (forcar) setAtualizando(true);
       setErro(null);
-      
-      const params = new URLSearchParams({ inicio: periodoInicio, fim: periodoFim });
+
+      const { inicio, fim } = periodoRef.current;
+      const params = new URLSearchParams({ inicio, fim });
       if (forcar) params.set("force", "true");
-      
-      // Adiciona timestamp único para FORÇAR o navegador a não usar cache
-      params.set("_t", Date.now().toString());
-      
-      console.log(`[CONTEXT] Buscando dados - force: ${forcar}, período: ${periodoInicio} a ${periodoFim}`);
-      console.log(`[CONTEXT] URL: /api/dashboard?${params.toString()}`);
-      
+
+      console.log(`[CONTEXT] Buscando dados - force: ${forcar}, período: ${inicio} a ${fim}`);
+
       const res = await fetch(`/api/dashboard?${params.toString()}`, {
-        method: 'GET',
-        cache: 'no-store', // NUNCA usa cache do navegador
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
+        cache: 'no-store',
       });
 
-      console.log(`[CONTEXT] Resposta recebida - status: ${res.status}, ok: ${res.ok}`);
-
       if (res.status === 401) {
-        console.log('[CONTEXT] Não autorizado, redirecionando para login');
         window.location.href = "/login";
         return;
       }
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        const errorMsg = body.error ?? `Erro HTTP ${res.status}`;
-        console.error('[CONTEXT] Erro na resposta:', errorMsg);
-        throw new Error(errorMsg);
+        throw new Error(body.error ?? `Erro HTTP ${res.status}`);
       }
-      
+
       const json: DadosDashboard = await res.json();
-      console.log(`[CONTEXT] Dados parseados com sucesso - ${json.colaboradores.length} colaboradores`);
-      console.log(`[CONTEXT] Timestamp dos dados: ${json.atualizadoEm}`);
-      
       setDados(json);
-      console.log('[CONTEXT] Estado atualizado com sucesso');
+      console.log(`[CONTEXT] Dados atualizados - ${json.colaboradores.length} colaboradores`);
     } catch (e) {
-      const errorMsg = e instanceof Error ? e.message : "Erro desconhecido";
-      console.error('[CONTEXT] ERRO ao atualizar:', errorMsg, e);
-      setErro(errorMsg);
+      setErro(e instanceof Error ? e.message : "Erro desconhecido");
     } finally {
       setCarregando(false);
       setAtualizando(false);
-      console.log('[CONTEXT] Atualização finalizada');
+      requisicaoEmAndamento.current = false;
     }
-  }, [periodoInicio, periodoFim]);
+  }, []); // sem dependências — usa periodoRef para acessar período atual
 
+  // Carrega dados UMA única vez ao montar (não ao trocar de página)
+  const carregouInicial = useRef(false);
   useEffect(() => {
     if (pathname === "/login") {
       setCarregando(false);
       return;
     }
+    if (carregouInicial.current) return;
+    carregouInicial.current = true;
     atualizar(false);
-  }, [atualizar, pathname]);
+  }, [pathname, atualizar]);
 
-  // Atualiza automaticamente quando o período muda
+  // Atualiza APENAS quando o período muda explicitamente pelo usuário
+  const periodoInicializado = useRef(false);
+  useEffect(() => {
+    if (!periodoInicializado.current) {
+      periodoInicializado.current = true;
+      return; // ignora o mount inicial
+    }
+    if (pathname === "/login") return;
+    console.log('[CONTEXT] Período alterado, atualizando...');
+    atualizar(true);
+  }, [periodoInicio, periodoFim]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Atualização automática a cada 1 hora
   useEffect(() => {
     if (pathname === "/login") return;
-    if (carregando) return; // Não atualiza durante o carregamento inicial
-    
-    console.log('[CONTEXT] Período alterado, atualizando dados...');
-    atualizar(true); // Força atualização para ignorar cache
-  }, [periodoInicio, periodoFim, pathname, carregando, atualizar]);
-
-  // Atualização automática a cada hora
-  useEffect(() => {
-    if (pathname === "/login") return;
-
-    // Configura intervalo de 1 hora (3600000 ms)
     const intervalo = setInterval(() => {
-      console.log('[AUTO-UPDATE] Atualizando dados automaticamente...');
-      atualizar(true); // Força atualização para ignorar cache
-    }, 3600000); // 1 hora
-
-    // Limpa o intervalo quando o componente é desmontado
+      console.log('[AUTO-UPDATE] Atualização automática (1h)');
+      atualizar(true);
+    }, 3600000);
     return () => clearInterval(intervalo);
   }, [atualizar, pathname]);
 
