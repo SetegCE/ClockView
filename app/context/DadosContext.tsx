@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import type { DadosDashboard } from "@/lib/types";
 
@@ -38,17 +38,10 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const [periodoFim, setPeriodoFim] = useState(ultimoDiaDoMes());
   const pathname = usePathname();
 
-  // Ref para evitar requisições simultâneas
-  const requisicaoEmAndamento = useRef(false);
+  // Controla se é o primeiro render (não dispara busca ao mudar período no mount)
+  const montado = useRef(false);
 
-  // Função interna que recebe o período explicitamente — sem depender de refs ou closures
-  const buscarDados = useCallback(async (inicio: string, fim: string, forcar: boolean) => {
-    if (requisicaoEmAndamento.current) {
-      console.log('[CONTEXT] Requisição já em andamento, ignorando');
-      return;
-    }
-    requisicaoEmAndamento.current = true;
-
+  async function buscar(inicio: string, fim: string, forcar: boolean) {
     try {
       if (forcar) setAtualizando(true);
       setErro(null);
@@ -56,10 +49,10 @@ export function DadosProvider({ children }: { children: ReactNode }) {
       const params = new URLSearchParams({ inicio, fim });
       if (forcar) params.set("force", "true");
 
-      console.log(`[CONTEXT] Buscando dados - force: ${forcar}, período: ${inicio} a ${fim}`);
+      console.log(`[CONTEXT] Buscando: ${inicio} a ${fim}, force=${forcar}`);
 
       const res = await fetch(`/api/dashboard?${params.toString()}`, {
-        cache: 'no-store',
+        cache: "no-store",
       });
 
       if (res.status === 401) {
@@ -74,54 +67,45 @@ export function DadosProvider({ children }: { children: ReactNode }) {
 
       const json: DadosDashboard = await res.json();
       setDados(json);
-      console.log(`[CONTEXT] Dados atualizados - ${json.colaboradores.length} colaboradores`);
+      console.log(`[CONTEXT] OK - ${json.colaboradores.length} colaboradores`);
     } catch (e) {
       setErro(e instanceof Error ? e.message : "Erro desconhecido");
     } finally {
       setCarregando(false);
       setAtualizando(false);
-      requisicaoEmAndamento.current = false;
     }
-  }, []);
+  }
 
-  // atualizar exposto no contexto — usa o período atual do estado
-  const atualizar = useCallback(async (forcar = false) => {
-    await buscarDados(periodoInicio, periodoFim, forcar);
-  }, [buscarDados, periodoInicio, periodoFim]);
-
-  // Carrega dados UMA única vez ao montar
-  const carregouInicial = useRef(false);
+  // Carregamento inicial — uma única vez
   useEffect(() => {
     if (pathname === "/login") {
       setCarregando(false);
       return;
     }
-    if (carregouInicial.current) return;
-    carregouInicial.current = true;
-    buscarDados(periodoInicio, periodoFim, false);
-  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+    buscar(periodoInicio, periodoFim, false);
+    montado.current = true;
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Atualiza quando o período muda — ignora o mount inicial
-  const periodoInicializado = useRef(false);
+  // Quando período muda — ignora o mount inicial
   useEffect(() => {
-    if (!periodoInicializado.current) {
-      periodoInicializado.current = true;
-      return;
-    }
+    if (!montado.current) return;
     if (pathname === "/login") return;
-    console.log(`[CONTEXT] Período alterado: ${periodoInicio} a ${periodoFim}`);
-    buscarDados(periodoInicio, periodoFim, true);
+    buscar(periodoInicio, periodoFim, true);
   }, [periodoInicio, periodoFim]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Atualização automática a cada 1 hora
   useEffect(() => {
     if (pathname === "/login") return;
     const intervalo = setInterval(() => {
-      console.log('[AUTO-UPDATE] Atualização automática (1h)');
-      atualizar(true);
+      console.log("[AUTO-UPDATE] 1h");
+      buscar(periodoInicio, periodoFim, true);
     }, 3600000);
     return () => clearInterval(intervalo);
-  }, [atualizar, pathname]);
+  }, [periodoInicio, periodoFim, pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function atualizar(forcar = false) {
+    await buscar(periodoInicio, periodoFim, forcar);
+  }
 
   return (
     <DadosContext.Provider value={{
