@@ -9,6 +9,7 @@ export type ResultadoClockify<T> =
 
 /**
  * Realiza chamada GET à Clockify API com autenticação e timeout de 8 segundos.
+ * cache: 'no-store' garante que o Next.js/Vercel nunca faça cache desta chamada.
  */
 export async function fetchFromClockify<T>(
   path: string,
@@ -24,6 +25,7 @@ export async function fetchFromClockify<T>(
   try {
     const resposta = await fetch(`${CLOCKIFY_BASE_URL}${path}`, {
       headers: { "X-Api-Key": token },
+      cache: "no-store", // impede cache do Next.js/Vercel Data Cache
       signal: controller.signal,
     });
 
@@ -54,6 +56,7 @@ export async function fetchFromClockify<T>(
 
 /**
  * Versão com timeout maior (30s) para buscas paginadas de entradas de tempo.
+ * cache: 'no-store' garante que o Next.js/Vercel nunca faça cache desta chamada.
  */
 export async function fetchFromClockifyLong<T>(
   path: string,
@@ -69,6 +72,7 @@ export async function fetchFromClockifyLong<T>(
   try {
     const resposta = await fetch(`${CLOCKIFY_BASE_URL}${path}`, {
       headers: { "X-Api-Key": token },
+      cache: "no-store", // impede cache do Next.js/Vercel Data Cache
       signal: controller.signal,
     });
 
