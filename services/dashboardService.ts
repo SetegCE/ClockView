@@ -246,9 +246,6 @@ async function buscarEntradasUsuario(
   return todas;
 }
 
-// ─── Lock de processamento — evita processamentos simultâneos ─────────────────
-const globalLock = global as typeof global & { _clockviewProcessando?: Promise<DadosDashboard> };
-
 // ─── Processamento principal ──────────────────────────────────────────────────
 
 export async function processarDashboard(startDate?: string, endDate?: string, force: boolean = false): Promise<DadosDashboard> {
@@ -265,39 +262,9 @@ export async function processarDashboard(startDate?: string, endDate?: string, f
   const cached = getCacheDados(chaveCache, force);
   if (cached) return cached;
 
-  // Se já tem um processamento em andamento para o mesmo período, aguarda ele
-  if (!force && globalLock._clockviewProcessando) {
-    console.log('[API] Aguardando processamento em andamento...');
-    return globalLock._clockviewProcessando;
-  }
-
-  console.log('[API] Iniciando processamento...');
-  console.log(`[API] Período: ${startDate ?? START_DATE} até ${endDate ?? hoje}`);
-
-  // Cria a promise do processamento e registra no lock global
-  const promiseProcessamento = _executarProcessamento(startDate, endDate, hoje, startISO, endISO, chaveCache);
-  globalLock._clockviewProcessando = promiseProcessamento;
-
-  try {
-    const resultado = await promiseProcessamento;
-    return resultado;
-  } finally {
-    globalLock._clockviewProcessando = undefined;
-  }
-}
-
-async function _executarProcessamento(
-  startDate: string | undefined,
-  endDate: string | undefined,
-  hoje: string,
-  startISO: string,
-  endISO: string,
-  chaveCache: string,
-): Promise<DadosDashboard> {
-  console.log(`[API] Processando: ${startDate ?? START_DATE} até ${endDate ?? hoje}`);
+  console.log(`[API] Buscando dados: ${startDate ?? START_DATE} até ${endDate ?? hoje}, force=${force}`);
 
   // Calcula segunda-feira da semana atual (baseada em hoje) para filtrar semanas futuras
-  // Nota: Usa 'hoje' e não 'endDate' para garantir que a semana atual seja sempre incluída
   const segundaFeiraAtual = getSemana(`${hoje}T23:59:59Z`);
 
   // Busca usuários, projetos e tags em paralelo
@@ -307,7 +274,7 @@ async function _executarProcessamento(
     buscarTags()
   ]);
 
-  console.log(`[API] Usuários ACTIVE retornados pelo Clockify (${usuarios.length}):`, usuarios.map(u => limparNome(u.name)).sort().join(', '));
+  console.log(`[API] Usuários ACTIVE (${usuarios.length}):`, usuarios.map(u => limparNome(u.name)).sort().join(', '));
 
   // Mapas de lookup - filtra apenas por EXCLUDE_USERS (blacklist)
   const mapaUsuarios = new Map(
