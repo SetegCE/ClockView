@@ -305,21 +305,10 @@ export async function processarDashboard(startDate?: string, endDate?: string, f
 
   const mapaTags = new Map(tags.map((t) => [t.id, t.name]));
 
-  // Pré-busca tarefas de todos os projetos em paralelo (máx 5 simultâneos)
-  // Evita chamadas HTTP dentro do loop de entradas que causam Too Many Requests
-  const cacheTarefas = new Map<string, Map<string, string>>();
-  const projetosComTarefas = projetos.filter(p => p.id);
-  await parallelLimit(
-    projetosComTarefas.map(p => async () => {
-      const tarefas = await buscarTarefasProjeto(p.id);
-      if (tarefas.size > 0) cacheTarefas.set(p.id, tarefas);
-    }),
-    5
-  );
-  console.log(`[API] Tarefas pré-carregadas de ${cacheTarefas.size} projetos`);
-
-  function obterNomeTarefa(projectId: string, taskId: string): string | null {
-    return cacheTarefas.get(projectId)?.get(taskId) ?? null;
+  // Tarefas: não buscadas para evitar excesso de requisições à API do Clockify
+  // O nome da tarefa é uma informação secundária — prioridade é mostrar horas corretas
+  function obterNomeTarefa(_projectId: string, _taskId: string): string | null {
+    return null;
   }
 
   // Acumulador: nome → semana → bucket
