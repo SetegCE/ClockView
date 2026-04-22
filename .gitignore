@@ -33,3 +33,5 @@ tsconfig.tsbuildinfo
 
 # Kiro
 .kiro
+.specs
+.tests
