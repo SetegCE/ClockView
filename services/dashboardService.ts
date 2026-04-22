@@ -247,7 +247,7 @@ export async function processarDashboard(startDate?: string, endDate?: string, f
   const startISO = startLocal.toISOString();
   const endISO = endLocal.toISOString();
   
-  const chaveCache = `v7-${startDate ?? START_DATE}|${endDate ?? hoje}`; // v7 com correção de timezone
+  const chaveCache = `v8-${startDate ?? START_DATE}|${endDate ?? hoje}`; // v8 - sem cache em memoria
 
   // Retorna do cache se ainda válido (10s) E não for force
   const cached = getCacheDados(chaveCache, force);
@@ -269,10 +269,7 @@ export async function processarDashboard(startDate?: string, endDate?: string, f
     buscarTags()
   ]);
 
-  console.log('[DEBUG] Total de tags encontradas:', tags.length);
-  if (tags.length > 0) {
-    console.log('[DEBUG] Primeiras 5 tags:', tags.slice(0, 5).map(t => t.name));
-  }
+  console.log(`[API] Usuários ACTIVE retornados pelo Clockify (${usuarios.length}):`, usuarios.map(u => limparNome(u.name)).sort().join(', '));
 
   // Mapas de lookup - filtra apenas por EXCLUDE_USERS (blacklist)
   const mapaUsuarios = new Map(
