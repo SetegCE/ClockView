@@ -246,7 +246,8 @@ body {
 }
 .cv-col {
   flex: 1;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 .cv-inner {
   padding: 24px;
@@ -418,6 +419,8 @@ body {
 /* ── Tabela heatmap ── */
 .cv-heatmap-scroll {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 320px);
   width: 100%;
 }
 .cv-heatmap-inner {
