@@ -308,7 +308,7 @@ body {
   border-radius: 16px;
   border: 1px solid #f1f5f9;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .cv-toolbar {
@@ -441,6 +441,11 @@ body {
   padding-left: 232px;
   width: 100%;
   min-width: max-content;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 10;
+  border-bottom: 1px solid #f1f5f9;
 }
 .cv-week-label {
   width: 36px;
