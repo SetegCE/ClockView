@@ -236,7 +236,16 @@ async function buscarEntradasUsuario(
 
   while (true) {
     const path = `/workspaces/${CLOCKIFY_WORKSPACE_ID}/user/${userId}/time-entries?start=${start}&end=${end}&page=${page}&page-size=500`;
-    const r = await fetchFromClockifyLong<ClockifyTimeEntry[]>(path, CLOCKIFY_API_TOKEN);
+    
+    let r = await fetchFromClockifyLong<ClockifyTimeEntry[]>(path, CLOCKIFY_API_TOKEN);
+    
+    // Retry em caso de 429 (Too Many Requests) — aguarda 2s e tenta novamente
+    if ("status" in r && r.status === 429) {
+      console.log(`[API] 429 para userId ${userId} página ${page}, aguardando 2s...`);
+      await new Promise(res => setTimeout(res, 2000));
+      r = await fetchFromClockifyLong<ClockifyTimeEntry[]>(path, CLOCKIFY_API_TOKEN);
+    }
+    
     if ("status" in r) break;
     todas.push(...r.data);
     if (r.data.length < 500) break;
@@ -256,7 +265,7 @@ export async function processarDashboard(startDate?: string, endDate?: string, f
   const startISO = startLocal.toISOString();
   const endISO = endLocal.toISOString();
   
-  const chaveCache = `v9-${startDate ?? START_DATE}|${endDate ?? hoje}`;
+  const chaveCache = `v10-${startDate ?? START_DATE}|${endDate ?? hoje}`;
 
   // Retorna do cache se válido e não for force
   const cached = getCacheDados(chaveCache, force);
@@ -392,8 +401,8 @@ export async function processarDashboard(startDate?: string, endDate?: string, f
     return { uname, semanas };
   });
 
-  // Concorrência de 5: busca 5 usuários ao mesmo tempo
-  const resultados = await parallelLimit(tasks, 5);
+  // Concorrência de 3: reduzido para evitar Too Many Requests do Clockify
+  const resultados = await parallelLimit(tasks, 3);
   for (const { uname, semanas } of resultados) {
     raw.set(uname, semanas);
   }
