@@ -26,7 +26,7 @@ export default function Sidebar() {
   return (
     <aside className="cv-sidebar">
       {/* Logo SETEG */}
-      <Link href="/dashboard" title="ClockView" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "4px 0" }}>
+      <Link href="/dashboard" title="Bem-Te-View" style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "4px 0" }}>
         <Image
           src="/logo-seteg.png"
           alt="SETEG"

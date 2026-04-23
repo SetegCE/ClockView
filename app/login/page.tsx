@@ -65,7 +65,7 @@ export default function PageLogin() {
             style={{ width: 64, height: 64, objectFit: "contain", margin: "0 auto" }}
           />
           <h1 style={{ fontSize: 20, fontWeight: 700, color: "#1e293b", marginTop: 12 }}>
-            ClockView
+            Bem-Te-View
           </h1>
         </div>
 

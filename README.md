@@ -1,4 +1,4 @@
-# ClockView — SETEG
+# Bem-Te-View — SETEG
 
 Dashboard web para visualização de dados de jornada semanal dos colaboradores, consumindo a API do Clockify.
 

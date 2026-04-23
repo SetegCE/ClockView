@@ -14,7 +14,7 @@ export default function HeaderClient() {
   const pathname = usePathname();
   const { dados, atualizando, erro, atualizar, periodoInicio, periodoFim, setPeriodoInicio, setPeriodoFim } = useDados();
 
-  const titulo = TITULOS[pathname] ?? "ClockView";
+  const titulo = TITULOS[pathname] ?? "Bem-Te-View";
 
   const tsAtualizado = dados
     ? new Date(dados.atualizadoEm).toLocaleString("pt-BR", {

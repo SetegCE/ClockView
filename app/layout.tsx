@@ -5,7 +5,7 @@ import { DadosProvider } from "@/app/context/DadosContext";
 import AppShell from "@/app/components/AppShell";
 
 export const metadata: Metadata = {
-  title: "ClockView - Seteg",
+  title: "Bem-Te-View - Seteg",
   icons: {
     icon: "/logo-seteg.png",
   },
