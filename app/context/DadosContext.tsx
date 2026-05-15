@@ -38,8 +38,10 @@ export function DadosProvider({ children }: { children: ReactNode }) {
   const [periodoFim, setPeriodoFim] = useState(ultimoDiaDoMes());
   const pathname = usePathname();
 
-  // Controla se é o primeiro render (não dispara busca ao mudar período no mount)
+  // montado: true quando a busca inicial já foi disparada
   const montado = useRef(false);
+  // periodoJaMudou: permite que Effect 2 ignore o próprio mount inicial
+  const periodoJaMudou = useRef(false);
 
   async function buscar(inicio: string, fim: string, forcar: boolean) {
     try {
@@ -76,19 +78,29 @@ export function DadosProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Carregamento inicial — uma única vez
+  // Busca inicial — reage a mudanças de pathname para cobrir a navegação SPA pós-login.
+  // Quando router.push("/dashboard") é chamado após login, o layout não remonta,
+  // então um useEffect com deps=[] não reexecutaria. Com deps=[pathname], ele
+  // detecta a transição /login → /dashboard e dispara a busca.
   useEffect(() => {
     if (pathname === "/login") {
       setCarregando(false);
+      montado.current = false; // reset para suportar re-login na mesma sessão
       return;
     }
-    buscar(periodoInicio, periodoFim, false);
-    montado.current = true;
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!montado.current) {
+      montado.current = true;
+      buscar(periodoInicio, periodoFim, false);
+    }
+  }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Quando período muda — ignora o mount inicial
+  // Quando período muda — usa ref próprio para ignorar o mount inicial
+  // (periodoJaMudou evita a dupla chamada que ocorria com montado compartilhado)
   useEffect(() => {
-    if (!montado.current) return;
+    if (!periodoJaMudou.current) {
+      periodoJaMudou.current = true;
+      return;
+    }
     if (pathname === "/login") return;
     buscar(periodoInicio, periodoFim, true);
   }, [periodoInicio, periodoFim]); // eslint-disable-line react-hooks/exhaustive-deps

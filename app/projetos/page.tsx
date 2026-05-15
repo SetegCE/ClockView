@@ -37,12 +37,10 @@ export default function PageProjetos() {
   }
 
   const projetos = Array.from(mapaProj.values()).sort((a, b) => b.totalHoras - a.totalHoras);
-  const maxHoras = projetos.length > 0 ? projetos[0].totalHoras : 1;
   const totalGeralHoras = projetos.reduce((s, p) => s + p.totalHoras, 0);
 
   const proj = projetoSelecionado ? mapaProj.get(projetoSelecionado) ?? null : null;
   const colabsOrdenados = proj ? [...proj.colaboradores].sort((a, b) => b.horas - a.horas) : [];
-  const maxColabHoras = colabsOrdenados.length > 0 ? colabsOrdenados[0].horas : 1;
 
   return (
     <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
@@ -101,7 +99,7 @@ export default function PageProjetos() {
           {projetos.map((p, idx) => {
             const selecionado = projetoSelecionado === p.nome;
             const pctTotal = totalGeralHoras > 0 ? Math.round((p.totalHoras / totalGeralHoras) * 100) : 0;
-            const pctBarra = Math.round((p.totalHoras / maxHoras) * 100);
+            const pctBarra = totalGeralHoras > 0 ? Math.round((p.totalHoras / totalGeralHoras) * 100) : 0;
             const cor = PCOLS[idx % PCOLS.length];
 
             return (
@@ -207,7 +205,7 @@ export default function PageProjetos() {
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {colabsOrdenados.map((c, idx) => {
                   const pctColab = Math.round((c.horas / proj.totalHoras) * 100);
-                  const pctBarra = Math.round((c.horas / maxColabHoras) * 100);
+                  const pctBarra = proj.totalHoras > 0 ? Math.round((c.horas / proj.totalHoras) * 100) : 0;
                   const colab = dados.colaboradores.find((x) => x.nome === c.nome);
                   const expandido = colaboradorExpandido === c.nome;
                   
